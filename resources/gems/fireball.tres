@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="GemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/items/gem_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/ui/gem_icons/fireball.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/ui/gem_icons/fireball_inventory.png" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"fireball"
+display_name = "Fireball"
+item_type = 5
+default_rarity = 1
+accent_color = Color(1, 0.22, 0.06, 1)
+inventory_icon = ExtResource("3")
+tooltip_art = ExtResource("2")
+tier_label = "SKILL GEM"
+flavor_text = "Launches an explosive orb of flame."
+gem_kind = 0
+affinities = Array[StringName]([&"Spell", &"AOE", &"Fire", &"Duration", &"Projectile"])
+skill_id = &"fireball"
+effects = Dictionary[StringName, float]({&"damage_multiplier": 1.15, &"duration_multiplier": 1.0, &"explosion_radius": 72.0, &"pierce": 0.0, &"projectile_count": 1.0, &"projectile_scale": 1.45, &"projectile_speed_multiplier": 0.86, &"spread_degrees": 0.0})

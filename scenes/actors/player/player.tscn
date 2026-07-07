@@ -1,0 +1,45 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scenes/actors/player/player.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/stats/player_stats.tres" id="2"]
+[ext_resource type="Script" path="res://scenes/combat/health_component.gd" id="3"]
+[ext_resource type="Script" path="res://scenes/combat/hurtbox.gd" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/combat/auto_weapon.tscn" id="5"]
+[ext_resource type="Script" path="res://scenes/actors/player/player_visual.gd" id="6"]
+
+[sub_resource type="CircleShape2D" id="CircleShape_player_body"]
+radius = 16.0
+
+[sub_resource type="CircleShape2D" id="CircleShape_player_hurt"]
+radius = 18.0
+
+[node name="Player" type="CharacterBody2D" groups=["player"]]
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("1")
+base_stats = ExtResource("2")
+
+[node name="BodyShape" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape_player_body")
+
+[node name="Visual" type="Node2D" parent="."]
+script = ExtResource("6")
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("3")
+
+[node name="Hurtbox" type="Area2D" parent="."]
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("4")
+health_component = NodePath("../HealthComponent")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("CircleShape_player_hurt")
+
+[node name="AutoWeapon" parent="." instance=ExtResource("5")]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+zoom = Vector2(0.7, 0.7)
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="GemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/items/gem_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/ui/gem_icons/greater_volley.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/ui/gem_icons/greater_volley_inventory.png" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"greater_volley"
+display_name = "Greater Volley"
+item_type = 5
+default_rarity = 1
+accent_color = Color(0.25, 1, 0.42, 1)
+inventory_icon = ExtResource("3")
+tooltip_art = ExtResource("2")
+tier_label = "SUPPORT GEM"
+flavor_text = "Supported projectile skills fire two additional projectiles."
+gem_kind = 1
+affinities = Array[StringName]([&"Projectile"])
+required_affinities = Array[StringName]([&"Projectile"])
+effects = Dictionary[StringName, float]({&"damage_multiplier": 0.8, &"projectile_count": 2.0, &"spread_degrees": 18.0})

@@ -1,0 +1,604 @@
+[gd_scene load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/hud.gd" id="1"]
+[ext_resource type="Script" path="res://scenes/ui/upgrade_screen.gd" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/ui/inventory/inventory_screen.tscn" id="3"]
+[ext_resource type="Script" path="res://scenes/ui/pause_menu.gd" id="4"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_panel"]
+bg_color = Color(0.035, 0.025, 0.045, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.62, 0.42, 0.1, 0.95)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_bar_bg"]
+bg_color = Color(0.015, 0.012, 0.02, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.58, 0.39, 0.09, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_hp_fill"]
+bg_color = Color(1, 0.1, 0.25, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.35, 0.42, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_xp_fill"]
+bg_color = Color(0.05, 0.78, 0.58, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 1, 0.72, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_stats_panel"]
+bg_color = Color(0.018, 0.028, 0.042, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.12, 0.5, 0.58, 0.72)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0, 0, 0, 0.32)
+shadow_size = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_pause_panel"]
+bg_color = Color(0.018, 0.025, 0.043, 0.985)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.11, 0.82, 0.78, 0.9)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0, 0, 0.72)
+shadow_size = 24
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_pause_button"]
+bg_color = Color(0.035, 0.075, 0.1, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.16, 0.45, 0.5, 0.8)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_pause_button_hover"]
+bg_color = Color(0.055, 0.22, 0.24, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.18, 0.95, 0.82, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+shadow_color = Color(0.05, 0.9, 0.75, 0.2)
+shadow_size = 7
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_pause_button_pressed"]
+bg_color = Color(0.025, 0.13, 0.15, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.12, 0.72, 0.65, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_pause_button_focus"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.35, 1, 0.87, 0.9)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="GameUI" type="CanvasLayer"]
+script = ExtResource("1")
+
+[node name="HUD" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="HUDPanel" type="PanelContainer" parent="HUD"]
+layout_mode = 1
+offset_left = 18.0
+offset_top = 18.0
+offset_right = 438.0
+offset_bottom = 178.0
+theme_override_styles/panel = SubResource("StyleBox_panel")
+
+[node name="Margin" type="MarginContainer" parent="HUD/HUDPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 10
+
+[node name="Content" type="VBoxContainer" parent="HUD/HUDPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="Stats" type="GridContainer" parent="HUD/HUDPanel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 2
+columns = 4
+
+[node name="ScoreTitle" type="Label" parent="HUD/HUDPanel/Margin/Content/Stats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.68, 0.62, 0.52, 1)
+theme_override_font_sizes/font_size = 14
+text = "SCORE"
+
+[node name="ScoreLabel" type="Label" parent="HUD/HUDPanel/Margin/Content/Stats"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(76, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.93, 0.78, 1)
+theme_override_font_sizes/font_size = 16
+text = "0"
+
+[node name="WaveTitle" type="Label" parent="HUD/HUDPanel/Margin/Content/Stats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.68, 0.62, 0.52, 1)
+theme_override_font_sizes/font_size = 14
+text = "WAVE"
+
+[node name="WaveLabel" type="Label" parent="HUD/HUDPanel/Margin/Content/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.93, 0.78, 1)
+theme_override_font_sizes/font_size = 16
+text = "1"
+
+[node name="LevelTitle" type="Label" parent="HUD/HUDPanel/Margin/Content/Stats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.68, 0.62, 0.52, 1)
+theme_override_font_sizes/font_size = 14
+text = "LEVEL"
+
+[node name="LevelLabel" type="Label" parent="HUD/HUDPanel/Margin/Content/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.93, 0.78, 1)
+theme_override_font_sizes/font_size = 16
+text = "1"
+
+[node name="SkillTitle" type="Label" parent="HUD/HUDPanel/Margin/Content/Stats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.86, 0.73, 1)
+theme_override_font_sizes/font_size = 14
+text = "SKILL POINTS"
+
+[node name="SkillPointsLabel" type="Label" parent="HUD/HUDPanel/Margin/Content/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.93, 0.78, 1)
+theme_override_font_sizes/font_size = 15
+text = "0"
+
+[node name="HPBar" type="ProgressBar" parent="HUD/HUDPanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(392, 24)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBox_bar_bg")
+theme_override_styles/fill = SubResource("StyleBox_hp_fill")
+
+[node name="HPLabel" type="Label" parent="HUD/HUDPanel/Margin/Content/HPBar"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 0.96, 0.88, 1)
+theme_override_colors/font_outline_color = Color(0.15, 0.015, 0.03, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 14
+text = "100 / 100  VITALITY"
+vertical_alignment = 1
+
+[node name="XPBar" type="ProgressBar" parent="HUD/HUDPanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(392, 24)
+layout_mode = 2
+max_value = 5.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBox_bar_bg")
+theme_override_styles/fill = SubResource("StyleBox_xp_fill")
+
+[node name="XPLabel" type="Label" parent="HUD/HUDPanel/Margin/Content/XPBar"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.86, 1, 0.93, 1)
+theme_override_colors/font_outline_color = Color(0.015, 0.08, 0.045, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 14
+text = "0 / 5  ESSENCE"
+vertical_alignment = 1
+
+[node name="PlayerStatsPanel" type="PanelContainer" parent="HUD"]
+layout_mode = 1
+offset_left = 18.0
+offset_top = 188.0
+offset_right = 438.0
+offset_bottom = 320.0
+theme_override_styles/panel = SubResource("StyleBox_stats_panel")
+
+[node name="Margin" type="MarginContainer" parent="HUD/PlayerStatsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="Content" type="VBoxContainer" parent="HUD/PlayerStatsPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Title" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.82, 0.9, 1)
+theme_override_font_sizes/font_size = 13
+text = "PLAYER STATS"
+
+[node name="Grid" type="GridContainer" parent="HUD/PlayerStatsPanel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 3
+columns = 2
+
+[node name="AttackTitle" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "ATTACKS / SECOND"
+
+[node name="AttackLabel" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "1.54/s"
+horizontal_alignment = 2
+
+[node name="MovementTitle" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "MOVEMENT SPEED"
+
+[node name="MovementSpeedLabel" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "280"
+horizontal_alignment = 2
+
+[node name="RegenTitle" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "HEALTH REGEN / SECOND"
+
+[node name="HealthRegenLabel" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 1, 0.68, 1)
+theme_override_font_sizes/font_size = 14
+text = "0.00/s"
+horizontal_alignment = 2
+
+[node name="InventoryScreen" parent="." instance=ExtResource("3")]
+
+[node name="UpgradeScreen" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+process_mode = 3
+script = ExtResource("2")
+
+[node name="Shade" type="ColorRect" parent="UpgradeScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.01, 0.015, 0.03, 0.88)
+
+[node name="Center" type="CenterContainer" parent="UpgradeScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Content" type="VBoxContainer" parent="UpgradeScreen/Center"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="UpgradeScreen/Center/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 34
+text = "LEVEL UP"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="UpgradeScreen/Center/Content"]
+layout_mode = 2
+text = "Choose an upgrade"
+horizontal_alignment = 1
+
+[node name="Choices" type="VBoxContainer" parent="UpgradeScreen/Center/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="DeathPanel" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+process_mode = 3
+
+[node name="Shade" type="ColorRect" parent="DeathPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.01, 0.02, 0.88)
+
+[node name="Center" type="CenterContainer" parent="DeathPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Content" type="VBoxContainer" parent="DeathPanel/Center"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="DeathPanel/Center/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "RUN ENDED"
+horizontal_alignment = 1
+
+[node name="RestartButton" type="Button" parent="DeathPanel/Center/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 54)
+layout_mode = 2
+text = "Restart"
+
+[node name="PauseMenu" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+process_mode = 3
+script = ExtResource("4")
+
+[node name="Shade" type="ColorRect" parent="PauseMenu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.005, 0.01, 0.025, 0.82)
+
+[node name="Center" type="CenterContainer" parent="PauseMenu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PausePanel" type="PanelContainer" parent="PauseMenu/Center"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 760)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBox_pause_panel")
+
+[node name="Margin" type="MarginContainer" parent="PauseMenu/Center/PausePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 54
+theme_override_constants/margin_top = 42
+theme_override_constants/margin_right = 54
+theme_override_constants/margin_bottom = 34
+
+[node name="Content" type="VBoxContainer" parent="PauseMenu/Center/PausePanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Eyebrow" type="Label" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.18, 0.9, 0.82, 1)
+theme_override_constants/letter_spacing = 5
+theme_override_font_sizes/font_size = 14
+text = "SYSTEM // STANDBY"
+horizontal_alignment = 1
+
+[node name="Title" type="Label" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 1, 0.98, 1)
+theme_override_colors/font_shadow_color = Color(0.05, 0.75, 0.65, 0.35)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 3
+theme_override_font_sizes/font_size = 46
+text = "PAUSED"
+horizontal_alignment = 1
+
+[node name="Rule" type="HSeparator" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+layout_mode = 2
+
+[node name="Status" type="Label" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 15
+text = "Combat simulation suspended"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+
+[node name="DeathEffectLabel" type="Label" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.72, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+text = "ENEMY DEATH EFFECT"
+horizontal_alignment = 1
+
+[node name="DeathEffectOption" type="OptionButton" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBox_pause_button")
+theme_override_styles/hover = SubResource("StyleBox_pause_button_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pause_button_pressed")
+theme_override_styles/focus = SubResource("StyleBox_pause_button_focus")
+
+[node name="GameSpeedHeader" type="HBoxContainer" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PauseMenu/Center/PausePanel/Margin/Content/GameSpeedHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.72, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+text = "GAME SPEED  •  SPACE TO TOGGLE"
+
+[node name="GameSpeedValue" type="Label" parent="PauseMenu/Center/PausePanel/Margin/Content/GameSpeedHeader"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 1, 0.78, 1)
+theme_override_font_sizes/font_size = 17
+text = "200%"
+horizontal_alignment = 2
+
+[node name="GameSpeedSlider" type="HSlider" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+min_value = 25.0
+max_value = 500.0
+step = 25.0
+value = 200.0
+allow_greater = false
+allow_lesser = false
+
+[node name="ResumeButton" type="Button" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 62)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 1, 0.97, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 19
+theme_override_styles/normal = SubResource("StyleBox_pause_button")
+theme_override_styles/hover = SubResource("StyleBox_pause_button_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pause_button_pressed")
+theme_override_styles/focus = SubResource("StyleBox_pause_button_focus")
+text = "RESUME"
+
+[node name="PauseRestartButton" type="Button" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 62)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.9, 0.92, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBox_pause_button")
+theme_override_styles/hover = SubResource("StyleBox_pause_button_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pause_button_pressed")
+theme_override_styles/focus = SubResource("StyleBox_pause_button_focus")
+text = "RESTART RUN"
+
+[node name="QuitButton" type="Button" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 62)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.65, 0.67, 1)
+theme_override_colors/font_hover_color = Color(1, 0.82, 0.82, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBox_pause_button")
+theme_override_styles/hover = SubResource("StyleBox_pause_button_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pause_button_pressed")
+theme_override_styles/focus = SubResource("StyleBox_pause_button_focus")
+text = "QUIT TO DESKTOP"
+
+[node name="Hint" type="Label" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+layout_mode = 2
+size_flags_vertical = 10
+theme_override_colors/font_color = Color(0.38, 0.5, 0.54, 1)
+theme_override_font_sizes/font_size = 13
+text = "ESC  Resume    •    ↑ ↓  Navigate    •    ENTER  Select"
+horizontal_alignment = 1

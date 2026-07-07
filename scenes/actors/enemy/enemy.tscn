@@ -1,0 +1,62 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scenes/actors/enemy/enemy.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/stats/enemy_stats.tres" id="2"]
+[ext_resource type="Script" path="res://scenes/combat/health_component.gd" id="3"]
+[ext_resource type="Script" path="res://scenes/combat/hurtbox.gd" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/combat/contact_damage.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/pickups/xp_gem.tscn" id="6"]
+[ext_resource type="Script" path="res://scenes/actors/enemy/enemy_visual.gd" id="7"]
+[ext_resource type="Script" path="res://scenes/combat/hit_flash.gd" id="8"]
+[ext_resource type="PackedScene" path="res://scenes/ui/damage_number.tscn" id="9"]
+
+[sub_resource type="CircleShape2D" id="CircleShape_enemy_body"]
+radius = 15.0
+
+[sub_resource type="CircleShape2D" id="CircleShape_enemy_hurt"]
+radius = 18.0
+
+[node name="Enemy" type="CharacterBody2D" groups=["enemies"]]
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("1")
+base_stats = ExtResource("2")
+xp_gem_scene = ExtResource("6")
+damage_number_scene = ExtResource("9")
+
+[node name="BodyShape" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape_enemy_body")
+
+[node name="Visual" type="Node2D" parent="."]
+script = ExtResource("7")
+
+[node name="HealthLabel" type="Label" parent="."]
+offset_left = -40.0
+offset_top = -47.0
+offset_right = 40.0
+offset_bottom = -23.0
+theme_override_colors/font_color = Color(0.95, 0.97, 1, 1)
+theme_override_colors/font_outline_color = Color(0.02, 0.025, 0.04, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 16
+text = "20 HP"
+horizontal_alignment = 1
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("3")
+
+[node name="Hurtbox" type="Area2D" parent="."]
+collision_layer = 8
+collision_mask = 0
+script = ExtResource("4")
+health_component = NodePath("../HealthComponent")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("CircleShape_enemy_hurt")
+
+[node name="ContactDamage" parent="." instance=ExtResource("5")]
+
+[node name="HitFlash" type="Node" parent="."]
+script = ExtResource("8")
+health_component = NodePath("../HealthComponent")
+target = NodePath("../Visual")

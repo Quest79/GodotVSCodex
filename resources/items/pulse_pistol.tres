@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/ui/item_icons/pulse_pistol.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/ui/item_icons/pulse_pistol_inventory.png" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"pulse_pistol"
+display_name = "Pulse Pistol"
+item_type = 0
+default_rarity = 1
+allowed_slots = Array[StringName]([&"primary_weapon", &"secondary_weapon"])
+base_modifiers = Dictionary[StringName, float]({&"damage": 4.0})
+socket_count = 6
+accent_color = Color(0.1, 0.8, 1, 1)
+inventory_icon = ExtResource("3")
+tooltip_art = ExtResource("2")

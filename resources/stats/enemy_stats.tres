@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ActorStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/actor_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+max_health = 20.0
+move_speed = 95.0
+damage = 1.0
+cooldown = 1.0
+xp_reward = 1

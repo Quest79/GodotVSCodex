@@ -1,0 +1,31 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/pickups/xp_gem.gd" id="1"]
+[ext_resource type="Script" path="res://scenes/pickups/xp_gem_visual.gd" id="2"]
+
+[sub_resource type="CircleShape2D" id="CircleShape_gem"]
+radius = 10.0
+
+[node name="XPGem" type="Area2D"]
+collision_layer = 16
+collision_mask = 1
+script = ExtResource("1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape_gem")
+
+[node name="Visual" type="Node2D" parent="."]
+script = ExtResource("2")
+
+[node name="ValueLabel" type="Label" parent="."]
+offset_left = -22.0
+offset_top = -37.0
+offset_right = 22.0
+offset_bottom = -17.0
+theme_override_colors/font_color = Color(0.65, 1, 0.8, 1)
+theme_override_colors/font_outline_color = Color(0.015, 0.08, 0.045, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 15
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
