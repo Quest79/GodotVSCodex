@@ -51,9 +51,15 @@ func _build_inventory_grid() -> void:
 
 func _configure_equipment_slots() -> void:
 	_register_equipment_slot(%PrimaryWeapon, &"primary_weapon", "PRIMARY\nWEAPON")
+	_register_equipment_slot(%SecondaryWeapon, &"secondary_weapon", "SECONDARY WEAPON\nOR SHIELD")
+	_register_equipment_slot(%Helm, &"helm", "HELM")
 	_register_equipment_slot(%Armor, &"armor", "ARMOR")
+	_register_equipment_slot(%Gloves, &"gloves", "GLOVES")
 	_register_equipment_slot(%Boots, &"boots", "BOOTS")
-	_register_equipment_slot(%SecondaryWeapon, &"secondary_weapon", "SECONDARY\nWEAPON")
+	_register_equipment_slot(%Belt, &"belt", "BELT")
+	_register_equipment_slot(%Amulet, &"amulet", "AMULET")
+	_register_equipment_slot(%Ring1, &"ring_1", "RING")
+	_register_equipment_slot(%Ring2, &"ring_2", "RING")
 	_register_equipment_slot(%Implant, &"implant", "IMPLANT")
 	_register_equipment_slot(%Core, &"core", "CORE")
 

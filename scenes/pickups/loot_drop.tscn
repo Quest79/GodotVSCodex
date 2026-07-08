@@ -1,0 +1,28 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/pickups/loot_drop.gd" id="1"]
+
+[sub_resource type="CircleShape2D" id="CircleShape_loot"]
+radius = 25.0
+
+[node name="LootDrop" type="Area2D"]
+collision_layer = 32
+collision_mask = 1
+script = ExtResource("1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape_loot")
+
+[node name="Icon" type="Sprite2D" parent="."]
+position = Vector2(0, -12)
+scale = Vector2(0.45, 0.45)
+
+[node name="QualityLabel" type="Label" parent="."]
+offset_left = -90.0
+offset_top = 21.0
+offset_right = 90.0
+offset_bottom = 47.0
+theme_override_colors/font_outline_color = Color(0.01, 0.015, 0.025, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1

@@ -61,6 +61,7 @@ func _on_equipment_changed(modifiers: Dictionary) -> void:
 
 func _on_skill_loadout_changed(loadout: Dictionary) -> void:
 	player.apply_skill_loadout(loadout)
+	_broadcast_run_stats()
 
 func _sync_equipment() -> void:
 	_on_equipment_changed($ItemInventory.get_total_modifiers())
@@ -113,4 +114,21 @@ func _broadcast_progression() -> void:
 	GameEvents.progression_changed.emit(xp, xp_required, level)
 
 func _broadcast_run_stats() -> void:
-	GameEvents.run_stats_changed.emit(score, wave, 1.0 / player.stats.cooldown, player.stats.move_speed, player.stats.health_regen)
+	var config := player.weapon.skill_config
+	var attack_rate := 1.0 / player.stats.cooldown
+	var projectile_count := maxi(1, roundi(float(config.get(&"projectile_count", 1.0))))
+	var penetration := maxi(0, roundi(float(config.get(&"pierce", 0.0))))
+	var damage_per_projectile := player.stats.damage * float(config.get(&"damage_multiplier", 1.0))
+	var attack_name := String(config.get(&"skill_name", "Default Attack"))
+	var main_attack_dps := damage_per_projectile * projectile_count * attack_rate
+	GameEvents.run_stats_changed.emit(
+		score,
+		wave,
+		attack_rate,
+		player.stats.move_speed,
+		player.stats.health_regen,
+		attack_name,
+		penetration,
+		projectile_count,
+		main_attack_dps
+	)

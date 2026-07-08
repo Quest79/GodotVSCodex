@@ -16,6 +16,8 @@ var placeholder := ""
 
 func _ready() -> void:
 	pressed.connect(_on_pressed)
+	socket_row.drop_requested.connect(_on_socket_drop_requested)
+	socket_row.socket_clicked.connect(_on_socket_target_clicked)
 	_show_item()
 
 func configure(index: int, type: StringName, display_name: String = "") -> void:
@@ -54,7 +56,7 @@ func _set_icon_drag_preview(texture: Texture2D) -> void:
 	preview_art.texture = texture
 	preview_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	preview_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	preview_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	preview_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	set_drag_preview(preview)
 
 func _can_drop_data(_position: Vector2, data: Variant) -> bool:
@@ -86,14 +88,14 @@ func _show_item() -> void:
 		text = placeholder
 		item_art.hide()
 		socket_row.hide()
-		socket_row.set_socket_data([])
+		socket_row.set_socket_data([], null)
 		tooltip_text = placeholder if not placeholder.is_empty() else "Empty inventory slot"
 		add_theme_color_override("font_color", Color(0.42, 0.62, 0.66))
 		return
 	text = ""
 	item_art.texture = _get_inventory_texture()
 	item_art.visible = item_art.texture != null
-	socket_row.set_socket_data(item.sockets)
+	socket_row.set_socket_data(item.sockets, item)
 	socket_row.visible = not item.sockets.is_empty()
 	tooltip_text = item.get_tooltip()
 	add_theme_color_override("font_color", item.get_rarity_color())
@@ -108,9 +110,18 @@ func _on_pressed() -> void:
 	if socket_index >= 0 and item.sockets[socket_index]:
 		socket_clicked.emit(item, socket_index)
 
+func _on_socket_drop_requested(data: Dictionary, socket_index: int) -> void:
+	drop_requested.emit(data, &"socket", {"item": item, "index": socket_index})
+
+func _on_socket_target_clicked(socket_index: int) -> void:
+	if item and socket_index >= 0 and socket_index < item.sockets.size() and item.sockets[socket_index]:
+		socket_clicked.emit(item, socket_index)
+
 func _get_inventory_texture(source_item: Resource = null) -> Texture2D:
 	if not source_item:
 		source_item = item
-	if source_item.definition.inventory_icon:
-		return source_item.definition.inventory_icon
-	return source_item.definition.tooltip_art
+	# Always render from the original full-resolution art. Godot handles the
+	# downscale with mipmapped filtering and preserves its aspect ratio.
+	if source_item.definition.tooltip_art:
+		return source_item.definition.tooltip_art
+	return source_item.definition.inventory_icon

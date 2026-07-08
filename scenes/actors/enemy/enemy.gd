@@ -6,6 +6,8 @@ const DEATH_FX := preload("res://scenes/actors/enemy/enemy_death_fx.gd")
 @export var base_stats: ActorStats
 @export var xp_gem_scene: PackedScene
 @export var damage_number_scene: PackedScene
+@export var loot_drop_scene: PackedScene
+@export var loot_definitions: Array[Resource] = []
 
 @onready var health: HealthComponent = $HealthComponent
 @onready var contact_damage: ContactDamage = $ContactDamage
@@ -46,6 +48,7 @@ func _on_died() -> void:
 		return
 	dying = true
 	GameEvents.enemy_defeated.emit()
+	_try_drop_loot()
 	if xp_gem_scene:
 		var gem := xp_gem_scene.instantiate() as XPGem
 		gem.global_position = global_position
@@ -57,3 +60,27 @@ func _on_died() -> void:
 	var visual_scale := maxf(absf($Visual.global_scale.x), absf($Visual.global_scale.y))
 	effect.configure(GameEvents.enemy_death_effect, 19.0 * visual_scale)
 	queue_free()
+
+func _try_drop_loot() -> void:
+	if not loot_drop_scene or loot_definitions.is_empty():
+		return
+	var roll := randf() * 100.0
+	var rarity := -1
+	# Absolute per-kill chances: 0.1% mythic, 0.5% epic, 1% rare,
+	# 3% uncommon, and 5% common. The remaining 90.4% drops nothing.
+	if roll < 0.1:
+		rarity = ItemDefinition.Rarity.MYTHIC
+	elif roll < 0.6:
+		rarity = ItemDefinition.Rarity.EPIC
+	elif roll < 1.6:
+		rarity = ItemDefinition.Rarity.RARE
+	elif roll < 4.6:
+		rarity = ItemDefinition.Rarity.UNCOMMON
+	elif roll < 9.6:
+		rarity = ItemDefinition.Rarity.COMMON
+	if rarity < 0:
+		return
+	var drop := loot_drop_scene.instantiate() as Area2D
+	drop.call("configure", loot_definitions.pick_random(), rarity)
+	drop.global_position = global_position
+	get_tree().current_scene.call_deferred("add_child", drop)

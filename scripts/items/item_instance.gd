@@ -1,12 +1,14 @@
 class_name ItemInstance
 extends Resource
 
-const RARITY_NAMES := ["NORMAL", "MAGIC", "RARE", "UNIQUE"]
+const RARITY_NAMES := ["COMMON", "UNCOMMON", "RARE", "EPIC", "MYTHIC"]
+const RARITY_STAT_BONUSES := [0.0, 0.05, 0.10, 0.20, 0.50]
 const RARITY_COLORS := [
 	Color(0.76, 0.8, 0.82),
+	Color(0.3, 0.95, 0.45),
 	Color(0.3, 0.55, 1.0),
-	Color(1.0, 0.82, 0.2),
-	Color(1.0, 0.45, 0.12),
+	Color(0.72, 0.3, 1.0),
+	Color(1.0, 0.48, 0.08),
 ]
 
 var definition: Resource
@@ -19,7 +21,7 @@ var equipped_slot: StringName
 func initialize(item_definition: Resource, item_rarity: int = -1) -> void:
 	definition = item_definition
 	rarity = definition.default_rarity if item_rarity < 0 else item_rarity
-	sockets.resize(definition.socket_count)
+	sockets.resize(definition.socket_count if definition.allows_sockets() else 0)
 
 func can_equip_to(slot: StringName) -> bool:
 	return definition != null and definition.allowed_slots.has(slot)
@@ -28,6 +30,9 @@ func get_modifiers() -> Dictionary[StringName, float]:
 	var combined: Dictionary[StringName, float] = definition.base_modifiers.duplicate()
 	for stat in rolled_modifiers:
 		combined[stat] = combined.get(stat, 0.0) + rolled_modifiers[stat]
+	var quality_multiplier: float = 1.0 + RARITY_STAT_BONUSES[clampi(rarity, 0, RARITY_STAT_BONUSES.size() - 1)]
+	for stat in combined:
+		combined[stat] *= quality_multiplier
 	return combined
 
 func get_skill_configs() -> Array[Dictionary]:

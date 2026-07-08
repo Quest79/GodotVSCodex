@@ -16,8 +16,14 @@ var inventory: Array[Resource] = []
 var equipment := {
 	&"primary_weapon": null,
 	&"secondary_weapon": null,
+	&"helm": null,
 	&"armor": null,
+	&"gloves": null,
 	&"boots": null,
+	&"belt": null,
+	&"amulet": null,
+	&"ring_1": null,
+	&"ring_2": null,
 	&"implant": null,
 	&"core": null,
 }
@@ -39,6 +45,15 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_PREDELETE:
 		_save_inventory()
+
+func clear_saved_run() -> void:
+	# Disable persistence first so freeing the old scene cannot recreate the
+	# save through NOTIFICATION_PREDELETE after it has been removed.
+	persistence_ready = false
+	if FileAccess.file_exists(SAVE_PATH):
+		var error := DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+		if error != OK:
+			push_warning("Could not clear saved equipment and inventory: %s" % error)
 
 func _save_inventory() -> void:
 	if not persistence_ready:

@@ -266,7 +266,7 @@ layout_mode = 1
 offset_left = 18.0
 offset_top = 188.0
 offset_right = 438.0
-offset_bottom = 320.0
+offset_bottom = 440.0
 theme_override_styles/panel = SubResource("StyleBox_stats_panel")
 
 [node name="Margin" type="MarginContainer" parent="HUD/PlayerStatsPanel"]
@@ -284,13 +284,28 @@ theme_override_constants/separation = 5
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 0.82, 0.9, 1)
 theme_override_font_sizes/font_size = 13
-text = "PLAYER STATS"
+text = "GAME STATISTICS"
 
 [node name="Grid" type="GridContainer" parent="HUD/PlayerStatsPanel/Margin/Content"]
 layout_mode = 2
 theme_override_constants/h_separation = 16
 theme_override_constants/v_separation = 3
 columns = 2
+
+[node name="MainAttackTitle" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "MAIN ATTACK"
+
+[node name="MainAttackLabel" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.78, 0.32, 1)
+theme_override_font_sizes/font_size = 14
+text = "DEFAULT ATTACK"
+horizontal_alignment = 2
 
 [node name="AttackTitle" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
 layout_mode = 2
@@ -335,6 +350,66 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.4, 1, 0.68, 1)
 theme_override_font_sizes/font_size = 14
 text = "0.00/s"
+horizontal_alignment = 2
+
+[node name="PenetrationTitle" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "PROJECTILE PENETRATION"
+
+[node name="PenetrationLabel" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "0"
+horizontal_alignment = 2
+
+[node name="ProjectileCountTitle" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "PROJECTILES / ATTACK"
+
+[node name="ProjectileCountLabel" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "1"
+horizontal_alignment = 2
+
+[node name="MainAttackDPSTitle" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "MAIN ATTACK DPS"
+
+[node name="MainAttackDPSLabel" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.52, 0.3, 1)
+theme_override_font_sizes/font_size = 14
+text = "0.0"
+horizontal_alignment = 2
+
+[node name="FPSTitle" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "CURRENT FRAMERATE"
+
+[node name="FPSLabel" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 1, 0.68, 1)
+theme_override_font_sizes/font_size = 14
+text = "0"
 horizontal_alignment = 2
 
 [node name="InventoryScreen" parent="." instance=ExtResource("3")]
@@ -463,7 +538,7 @@ grow_vertical = 2
 
 [node name="PausePanel" type="PanelContainer" parent="PauseMenu/Center"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(520, 760)
+custom_minimum_size = Vector2(520, 850)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBox_pause_panel")
 
@@ -554,6 +629,35 @@ min_value = 25.0
 max_value = 500.0
 step = 25.0
 value = 200.0
+allow_greater = false
+allow_lesser = false
+
+[node name="RenderingScaleHeader" type="HBoxContainer" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PauseMenu/Center/PausePanel/Margin/Content/RenderingScaleHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.72, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+text = "RENDERING RESOLUTION"
+
+[node name="RenderingScaleValue" type="Label" parent="PauseMenu/Center/PausePanel/Margin/Content/RenderingScaleHeader"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 1, 0.78, 1)
+theme_override_font_sizes/font_size = 17
+text = "100%"
+horizontal_alignment = 2
+
+[node name="RenderingScaleSlider" type="HSlider" parent="PauseMenu/Center/PausePanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+min_value = 25.0
+max_value = 200.0
+step = 25.0
+value = 100.0
 allow_greater = false
 allow_lesser = false
 

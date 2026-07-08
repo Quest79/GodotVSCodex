@@ -21,6 +21,9 @@ func _ready() -> void:
 	%GameSpeedSlider.value = GameEvents.game_speed_percent
 	%GameSpeedSlider.value_changed.connect(_on_game_speed_changed)
 	_update_game_speed_label(GameEvents.game_speed_percent)
+	%RenderingScaleSlider.value = GameEvents.rendering_scale_percent
+	%RenderingScaleSlider.value_changed.connect(_on_rendering_scale_changed)
+	_update_rendering_scale_label(GameEvents.rendering_scale_percent)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed("ui_cancel"):
@@ -62,7 +65,13 @@ func _close() -> void:
 func _restart() -> void:
 	is_open = false
 	get_tree().paused = false
+	_clear_saved_run()
 	get_tree().reload_current_scene()
+
+func _clear_saved_run() -> void:
+	var inventory := get_tree().get_first_node_in_group("item_inventory")
+	if inventory and inventory.has_method("clear_saved_run"):
+		inventory.call("clear_saved_run")
 
 func _quit() -> void:
 	get_tree().quit()
@@ -81,3 +90,11 @@ func _on_game_speed_changed(value: float) -> void:
 
 func _update_game_speed_label(value: float) -> void:
 	%GameSpeedValue.text = "%d%%" % roundi(value)
+
+func _on_rendering_scale_changed(value: float) -> void:
+	GameEvents.rendering_scale_percent = value
+	GameEvents.apply_rendering_scale()
+	_update_rendering_scale_label(value)
+
+func _update_rendering_scale_label(value: float) -> void:
+	%RenderingScaleValue.text = "%d%%" % roundi(value)

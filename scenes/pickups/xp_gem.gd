@@ -13,6 +13,8 @@ var merged_xp := 0
 var target: Node2D
 var collected := false
 var merging := false
+var crystal_target: XPGem
+var crystal_scan_elapsed := 0.0
 
 @onready var value_label: Label = $ValueLabel
 @onready var visual: Node2D = $Visual
@@ -32,7 +34,11 @@ func _physics_process(delta: float) -> void:
 	if global_position.distance_squared_to(target.global_position) <= pickup_range * pickup_range:
 		global_position = global_position.move_toward(target.global_position, move_speed * delta)
 		return
-	_attract_to_crystals(delta)
+	crystal_scan_elapsed += delta
+	if crystal_scan_elapsed >= 0.12 or not is_instance_valid(crystal_target):
+		crystal_scan_elapsed = 0.0
+		crystal_target = _find_crystal_target()
+	_attract_to_crystal(delta)
 
 func set_xp_value(value: int) -> void:
 	xp_value = maxi(value, 1)
@@ -46,9 +52,9 @@ func _update_appearance() -> void:
 	visual.scale = Vector2.ONE * growth
 	value_label.add_theme_color_override("font_color", Color("#a9e8ff") if xp_value >= MAX_XP else Color("#c9a8ef").lerp(Color("#9168c7"), minf(merged_xp / 20.0, 1.0)))
 
-func _attract_to_crystals(delta: float) -> void:
+func _find_crystal_target() -> XPGem:
 	if xp_value >= MAX_XP:
-		return
+		return null
 	var nearest: XPGem
 	var nearest_distance_squared := crystal_attraction_radius * crystal_attraction_radius
 	for candidate_node in get_tree().get_nodes_in_group("xp_crystals"):
@@ -59,16 +65,25 @@ func _attract_to_crystals(delta: float) -> void:
 		if distance_squared < nearest_distance_squared:
 			nearest = candidate
 			nearest_distance_squared = distance_squared
-	if not is_instance_valid(nearest):
+	return nearest
+
+func _attract_to_crystal(delta: float) -> void:
+	if not is_instance_valid(crystal_target) or crystal_target.collected or crystal_target.merging or crystal_target.xp_value >= MAX_XP:
+		crystal_target = null
+		return
+	var nearest_distance_squared := global_position.distance_squared_to(crystal_target.global_position)
+	if nearest_distance_squared > crystal_attraction_radius * crystal_attraction_radius:
+		crystal_target = null
 		return
 	if nearest_distance_squared <= crystal_merge_distance * crystal_merge_distance:
 		# A stable instance-id tie breaker guarantees exactly one survivor.
-		if get_instance_id() < nearest.get_instance_id():
-			_absorb(nearest)
+		if get_instance_id() < crystal_target.get_instance_id():
+			_absorb(crystal_target)
+		crystal_target = null
 		return
 	var closeness := 1.0 - sqrt(nearest_distance_squared) / crystal_attraction_radius
 	var speed := crystal_attraction_speed * lerpf(0.45, 1.7, closeness)
-	global_position = global_position.move_toward(nearest.global_position, speed * delta)
+	global_position = global_position.move_toward(crystal_target.global_position, speed * delta)
 
 func _absorb(other: XPGem) -> void:
 	if not is_instance_valid(other) or other.collected or other.merging or xp_value >= MAX_XP:

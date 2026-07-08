@@ -7,29 +7,27 @@ const GRASS_DARK := Color("#355631")
 const DIRT := Color("#715d3f")
 const DIRT_EDGE := Color("#596044")
 const STONE := Color("#77786a")
-
-var wind_time := 0.0
-var redraw_accumulator := 0.0
+const GRASS_CHUNK_SCRIPT := preload("res://scenes/main/meadow_grass_chunk.gd")
+const GRASS_CHUNK_SIZE := 800.0
 
 func _ready() -> void:
 	z_index = -100
+	_build_grass_chunks()
 	queue_redraw()
 
-func _process(delta: float) -> void:
-	wind_time += delta
-	redraw_accumulator += delta
-	# A low redraw rate makes the wind feel gentle and avoids spending a full
-	# render pass on background decoration every gameplay frame.
-	if redraw_accumulator >= 0.08:
-		redraw_accumulator = 0.0
-		queue_redraw()
+func _build_grass_chunks() -> void:
+	for chunk_x in range(-7, 7):
+		for chunk_y in range(-7, 7):
+			var chunk := GRASS_CHUNK_SCRIPT.new() as MeadowGrassChunk
+			add_child(chunk)
+			chunk.configure(Rect2(
+				Vector2(chunk_x, chunk_y) * GRASS_CHUNK_SIZE,
+				Vector2.ONE * GRASS_CHUNK_SIZE
+			))
 
 func _draw() -> void:
 	draw_rect(Rect2(-HALF_SIZE, -HALF_SIZE, HALF_SIZE * 2.0, HALF_SIZE * 2.0), GRASS)
-	_draw_ground_variation()
 	_draw_paths()
-	_draw_stones()
-	_draw_meadow_details()
 
 func _draw_ground_variation() -> void:
 	# Large overlapping translucent shapes keep the terrain transitions soft.
@@ -76,26 +74,6 @@ func _draw_stone(position: Vector2, radius: float) -> void:
 	draw_circle(position + Vector2(2, 4), radius, Color(0.12, 0.16, 0.11, 0.24))
 	draw_circle(position, radius, Color(STONE, 0.82))
 	draw_circle(position + Vector2(-radius * 0.25, -radius * 0.28), radius * 0.48, Color(0.62, 0.62, 0.53, 0.7))
-
-func _draw_meadow_details() -> void:
-	for gx in range(-31, 32):
-		for gy in range(-31, 32):
-			var index := (gx + 31) * 67 + gy + 31
-			if _rand(index, 201) < 0.38:
-				continue
-			var base := Vector2(gx, gy) * CELL_SIZE
-			base += Vector2((_rand(index, 202) - 0.5) * 125.0, (_rand(index, 203) - 0.5) * 125.0)
-			if _near_path(base):
-				continue
-			var sway := sin(wind_time * 1.15 + base.x * 0.013 + base.y * 0.009) * 2.2
-			var blade_color := Color("#6f8b4b") if index % 4 else Color("#829653")
-			for blade in range(3):
-				var root := base + Vector2(blade * 4.0 - 4.0, 0)
-				var height := 8.0 + _rand(index, 210 + blade) * 9.0
-				draw_line(root, root + Vector2(sway + blade - 1.0, -height), Color(blade_color, 0.72), 1.25, true)
-			if index % 43 == 0:
-				var flower := Color("#ddd48a") if index % 86 else Color("#b6c9e8")
-				draw_circle(base + Vector2(sway, -12), 2.2, flower)
 
 func _near_path(p: Vector2) -> bool:
 	var horizontal_y := 760.0 + sin(p.x * 0.0013) * 260.0 + sin(p.x * 0.0031) * 70.0

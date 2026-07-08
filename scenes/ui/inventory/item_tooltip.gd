@@ -7,7 +7,7 @@ const MOUSE_OFFSET := Vector2(20, 20)
 const TITLE_FONT := preload("res://assets/ui/item_tooltip/fonts/Oxanium-VariableFont_wght.ttf")
 const BODY_FONT := preload("res://assets/ui/item_tooltip/fonts/Oxanium-VariableFont_wght.ttf")
 
-const TYPE_NAMES := ["WEAPON", "ARMOR", "BOOTS", "IMPLANT", "CORE", "GEM"]
+const TYPE_NAMES := ["WEAPON", "ARMOR", "BOOTS", "IMPLANT", "CORE", "GEM", "HELM", "GLOVES", "BELT", "AMULET", "RING"]
 const STAT_ICONS := {
 	&"damage": preload("res://assets/ui/item_tooltip/icons/stat_physical_damage.png"),
 	&"critical_chance": preload("res://assets/ui/item_tooltip/icons/stat_critical_strike_chance.png"),

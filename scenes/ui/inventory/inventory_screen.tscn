@@ -1,8 +1,7 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/inventory/inventory_screen.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/ui/inventory/inventory_slot.tscn" id="2"]
-[ext_resource type="Script" path="res://scenes/ui/inventory/frame_preview.gd" id="3"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_panel"]
 bg_color = Color(0.012, 0.025, 0.04, 0.98)
@@ -17,18 +16,6 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 shadow_color = Color(0, 0, 0, 0.65)
 shadow_size = 16
-
-[sub_resource type="StyleBoxFlat" id="StyleBox_preview"]
-bg_color = Color(0.008, 0.018, 0.03, 0.9)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.08, 0.32, 0.4, 0.9)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxLine" id="StyleBox_line"]
 color = Color(0.08, 0.55, 0.65, 0.55)
@@ -106,66 +93,118 @@ theme_override_font_sizes/font_size = 17
 text = "ACTIVE LOADOUT"
 horizontal_alignment = 1
 
-[node name="EquipmentRow" type="HBoxContainer" parent="Center/Panel/Margin/Content"]
+[node name="EquipmentLayout" type="Control" parent="Center/Panel/Margin/Content"]
+custom_minimum_size = Vector2(920, 430)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_constants/separation = 18
-alignment = 1
 
-[node name="LeftSlots" type="VBoxContainer" parent="Center/Panel/Margin/Content/EquipmentRow"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="PrimaryWeapon" parent="Center/Panel/Margin/Content/EquipmentRow/LeftSlots" instance=ExtResource("2")]
+[node name="PrimaryWeapon" parent="Center/Panel/Margin/Content/EquipmentLayout" instance=ExtResource("2")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(128, 82)
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 20.0
+offset_top = 30.0
+offset_right = 180.0
+offset_bottom = 330.0
 
-[node name="Armor" parent="Center/Panel/Margin/Content/EquipmentRow/LeftSlots" instance=ExtResource("2")]
+[node name="Ring1" parent="Center/Panel/Margin/Content/EquipmentLayout" instance=ExtResource("2")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(128, 82)
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 200.0
+offset_top = 225.0
+offset_right = 275.0
+offset_bottom = 305.0
 
-[node name="Boots" parent="Center/Panel/Margin/Content/EquipmentRow/LeftSlots" instance=ExtResource("2")]
+[node name="Gloves" parent="Center/Panel/Margin/Content/EquipmentLayout" instance=ExtResource("2")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(128, 82)
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 150.0
+offset_top = 315.0
+offset_right = 285.0
+offset_bottom = 425.0
 
-[node name="FramePanel" type="PanelContainer" parent="Center/Panel/Margin/Content/EquipmentRow"]
-custom_minimum_size = Vector2(360, 270)
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBox_preview")
-
-[node name="FramePreview" type="Control" parent="Center/Panel/Margin/Content/EquipmentRow/FramePanel"]
-layout_mode = 2
-mouse_filter = 2
-script = ExtResource("3")
-
-[node name="FrameLabel" type="Label" parent="Center/Panel/Margin/Content/EquipmentRow/FramePanel/FramePreview"]
-layout_mode = 1
-anchors_preset = 12
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -35.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_colors/font_color = Color(0.32, 0.7, 0.76, 0.85)
-theme_override_font_sizes/font_size = 14
-text = "FRAME // ACTIVE"
-horizontal_alignment = 1
-
-[node name="RightSlots" type="VBoxContainer" parent="Center/Panel/Margin/Content/EquipmentRow"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="SecondaryWeapon" parent="Center/Panel/Margin/Content/EquipmentRow/RightSlots" instance=ExtResource("2")]
+[node name="Helm" parent="Center/Panel/Margin/Content/EquipmentLayout" instance=ExtResource("2")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(128, 82)
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 350.0
+offset_top = 5.0
+offset_right = 500.0
+offset_bottom = 110.0
 
-[node name="Implant" parent="Center/Panel/Margin/Content/EquipmentRow/RightSlots" instance=ExtResource("2")]
+[node name="Armor" parent="Center/Panel/Margin/Content/EquipmentLayout" instance=ExtResource("2")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(128, 82)
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 350.0
+offset_top = 120.0
+offset_right = 500.0
+offset_bottom = 355.0
 
-[node name="Core" parent="Center/Panel/Margin/Content/EquipmentRow/RightSlots" instance=ExtResource("2")]
+[node name="Belt" parent="Center/Panel/Margin/Content/EquipmentLayout" instance=ExtResource("2")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(128, 82)
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 350.0
+offset_top = 365.0
+offset_right = 500.0
+offset_bottom = 425.0
+
+[node name="Amulet" parent="Center/Panel/Margin/Content/EquipmentLayout" instance=ExtResource("2")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 535.0
+offset_top = 145.0
+offset_right = 615.0
+offset_bottom = 225.0
+
+[node name="Ring2" parent="Center/Panel/Margin/Content/EquipmentLayout" instance=ExtResource("2")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 535.0
+offset_top = 240.0
+offset_right = 615.0
+offset_bottom = 320.0
+
+[node name="SecondaryWeapon" parent="Center/Panel/Margin/Content/EquipmentLayout" instance=ExtResource("2")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 680.0
+offset_top = 30.0
+offset_right = 840.0
+offset_bottom = 330.0
+
+[node name="Boots" parent="Center/Panel/Margin/Content/EquipmentLayout" instance=ExtResource("2")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 625.0
+offset_top = 340.0
+offset_right = 775.0
+offset_bottom = 425.0
+
+[node name="Implant" parent="Center/Panel/Margin/Content/EquipmentLayout" instance=ExtResource("2")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 850.0
+offset_top = 340.0
+offset_right = 918.0
+offset_bottom = 405.0
+
+[node name="Core" parent="Center/Panel/Margin/Content/EquipmentLayout" instance=ExtResource("2")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 0
+offset_left = 850.0
+offset_top = 255.0
+offset_right = 918.0
+offset_bottom = 320.0
 
 [node name="InventoryLine" type="HSeparator" parent="Center/Panel/Margin/Content"]
 layout_mode = 2
