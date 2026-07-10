@@ -17,6 +17,9 @@ shape = SubResource("CircleShape_gem")
 [node name="Visual" type="Node2D" parent="."]
 script = ExtResource("2")
 
+[node name="VisibilityNotifier" type="VisibleOnScreenNotifier2D" parent="."]
+rect = Rect2(-24, -40, 48, 64)
+
 [node name="ValueLabel" type="Label" parent="."]
 offset_left = -22.0
 offset_top = -37.0

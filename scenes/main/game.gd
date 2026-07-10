@@ -26,8 +26,13 @@ func _ready() -> void:
 	call_deferred("_broadcast_run_stats")
 	call_deferred("_sync_equipment")
 	call_deferred("_update_speed_status")
+	GameEvents.call_deferred("apply_camera_zoom")
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("cycle_camera_zoom") and not choosing_upgrade:
+		GameEvents.cycle_camera_zoom()
+		get_viewport().set_input_as_handled()
+		return
 	if not event.is_action_pressed("toggle_game_speed") or run_ended or choosing_upgrade:
 		return
 	GameEvents.game_speed_active = not GameEvents.game_speed_active

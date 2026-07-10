@@ -4,6 +4,7 @@ var age := 0.0
 var duration := 0.55
 var awakened := false
 var strength := 1.0
+var redraw_elapsed := 0.0
 
 func configure(is_awakened: bool, amount: int) -> void:
 	awakened = is_awakened
@@ -15,7 +16,10 @@ func _process(delta: float) -> void:
 	if age >= duration:
 		queue_free()
 		return
-	queue_redraw()
+	redraw_elapsed += delta
+	if redraw_elapsed >= 1.0 / 30.0:
+		redraw_elapsed = 0.0
+		queue_redraw()
 
 func _draw() -> void:
 	var progress := age / duration

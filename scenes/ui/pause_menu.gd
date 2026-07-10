@@ -5,6 +5,7 @@ extends Control
 @onready var resume_button: Button = %ResumeButton
 
 var is_open := false
+var rebinding_action: StringName
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -12,6 +13,8 @@ func _ready() -> void:
 	resume_button.pressed.connect(_close)
 	%PauseRestartButton.pressed.connect(_restart)
 	%QuitButton.pressed.connect(_quit)
+	%CameraZoomKeybindButton.pressed.connect(_begin_camera_zoom_rebind)
+	_update_camera_zoom_keybind_button()
 	%DeathEffectOption.clear()
 	%DeathEffectOption.add_item("Radial Shatter", GameEvents.EnemyDeathEffect.RADIAL_SHATTER)
 	%DeathEffectOption.add_item("Spiral Shatter", GameEvents.EnemyDeathEffect.SPIRAL_SHATTER)
@@ -24,8 +27,13 @@ func _ready() -> void:
 	%RenderingScaleSlider.value = GameEvents.rendering_scale_percent
 	%RenderingScaleSlider.value_changed.connect(_on_rendering_scale_changed)
 	_update_rendering_scale_label(GameEvents.rendering_scale_percent)
+	%CameraZoomSlider.value = GameEvents.camera_zoom
+	%CameraZoomSlider.value_changed.connect(_on_camera_zoom_changed)
+	_update_camera_zoom_label(GameEvents.camera_zoom)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not rebinding_action.is_empty():
+		return
 	if not event.is_action_pressed("ui_cancel"):
 		return
 	if is_open:
@@ -35,6 +43,25 @@ func _unhandled_input(event: InputEvent) -> void:
 	else:
 		return
 	get_viewport().set_input_as_handled()
+
+func _input(event: InputEvent) -> void:
+	if rebinding_action.is_empty() or not event is InputEventKey:
+		return
+	var key_event := event as InputEventKey
+	if not key_event.pressed or key_event.echo:
+		return
+	if key_event.physical_keycode != KEY_ESCAPE:
+		GameEvents.set_keyboard_binding(rebinding_action, key_event.physical_keycode)
+	rebinding_action = &""
+	_update_camera_zoom_keybind_button()
+	get_viewport().set_input_as_handled()
+
+func _begin_camera_zoom_rebind() -> void:
+	rebinding_action = &"cycle_camera_zoom"
+	%CameraZoomKeybindButton.text = "PRESS A KEY   •   ESC TO CANCEL"
+
+func _update_camera_zoom_keybind_button() -> void:
+	%CameraZoomKeybindButton.text = "CYCLE CAMERA ZOOM   [ %s ]" % GameEvents.get_keyboard_binding_text(&"cycle_camera_zoom").to_upper()
 
 func _can_open() -> bool:
 	var ui := get_parent()
@@ -78,9 +105,11 @@ func _quit() -> void:
 
 func _on_death_effect_selected(index: int) -> void:
 	GameEvents.enemy_death_effect = %DeathEffectOption.get_item_id(index)
+	GameEvents.save_settings()
 
 func _on_game_speed_changed(value: float) -> void:
 	GameEvents.game_speed_percent = value
+	GameEvents.save_settings()
 	_update_game_speed_label(value)
 	if GameEvents.game_speed_active:
 		Engine.time_scale = value / 100.0
@@ -93,8 +122,18 @@ func _update_game_speed_label(value: float) -> void:
 
 func _on_rendering_scale_changed(value: float) -> void:
 	GameEvents.rendering_scale_percent = value
+	GameEvents.save_settings()
 	GameEvents.apply_rendering_scale()
 	_update_rendering_scale_label(value)
 
 func _update_rendering_scale_label(value: float) -> void:
 	%RenderingScaleValue.text = "%d%%" % roundi(value)
+
+func _on_camera_zoom_changed(value: float) -> void:
+	GameEvents.camera_zoom = value
+	GameEvents.save_settings()
+	GameEvents.apply_camera_zoom()
+	_update_camera_zoom_label(value)
+
+func _update_camera_zoom_label(value: float) -> void:
+	%CameraZoomValue.text = "%.2fx" % value

@@ -66,17 +66,17 @@ func _try_drop_loot() -> void:
 		return
 	var roll := randf() * 100.0
 	var rarity := -1
-	# Absolute per-kill chances: 0.1% mythic, 0.5% epic, 1% rare,
-	# 3% uncommon, and 5% common. The remaining 90.4% drops nothing.
-	if roll < 0.1:
+	# Original absolute chances reduced by exactly 50x: 0.002% mythic,
+	# 0.01% epic, 0.02% rare, 0.06% uncommon, and 0.1% common.
+	if roll < 0.002:
 		rarity = ItemDefinition.Rarity.MYTHIC
-	elif roll < 0.6:
+	elif roll < 0.012:
 		rarity = ItemDefinition.Rarity.EPIC
-	elif roll < 1.6:
+	elif roll < 0.032:
 		rarity = ItemDefinition.Rarity.RARE
-	elif roll < 4.6:
+	elif roll < 0.092:
 		rarity = ItemDefinition.Rarity.UNCOMMON
-	elif roll < 9.6:
+	elif roll < 0.192:
 		rarity = ItemDefinition.Rarity.COMMON
 	if rarity < 0:
 		return

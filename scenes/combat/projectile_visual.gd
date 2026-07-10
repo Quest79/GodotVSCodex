@@ -2,6 +2,7 @@ extends Node2D
 
 var skill_id := &"default_attack"
 var elapsed := 0.0
+var redraw_elapsed := 0.0
 
 func configure(new_skill_id: StringName) -> void:
 	skill_id = new_skill_id
@@ -10,7 +11,10 @@ func configure(new_skill_id: StringName) -> void:
 
 func _process(delta: float) -> void:
 	elapsed += delta
-	queue_redraw()
+	redraw_elapsed += delta
+	if redraw_elapsed >= 1.0 / 30.0:
+		redraw_elapsed = 0.0
+		queue_redraw()
 
 func _draw() -> void:
 	if skill_id == &"fireball":

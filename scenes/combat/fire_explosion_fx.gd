@@ -6,6 +6,7 @@ const SEGMENT_COUNT := 16
 
 var maximum_radius := 80.0
 var elapsed := 0.0
+var redraw_elapsed := 0.0
 
 func configure(radius: float) -> void:
 	maximum_radius = maxf(radius, 12.0)
@@ -16,7 +17,10 @@ func _process(delta: float) -> void:
 	if elapsed >= DURATION:
 		queue_free()
 		return
-	queue_redraw()
+	redraw_elapsed += delta
+	if redraw_elapsed >= 1.0 / 30.0:
+		redraw_elapsed = 0.0
+		queue_redraw()
 
 func _draw() -> void:
 	var progress := clampf(elapsed / DURATION, 0.0, 1.0)

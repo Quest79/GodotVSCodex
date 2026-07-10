@@ -6,6 +6,7 @@ const ItemInstanceScript = preload("res://scripts/items/item_instance.gd")
 var item: Resource
 var collected := false
 var age := 0.0
+var redraw_elapsed := 0.0
 
 @onready var icon: Sprite2D = $Icon
 @onready var quality_label: Label = $QualityLabel
@@ -28,7 +29,10 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	age += delta
 	icon.position.y = -12.0 + sin(age * 3.2) * 3.0
-	queue_redraw()
+	redraw_elapsed += delta
+	if redraw_elapsed >= 1.0 / 30.0:
+		redraw_elapsed = 0.0
+		queue_redraw()
 
 func _draw() -> void:
 	if not item:

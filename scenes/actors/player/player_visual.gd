@@ -5,6 +5,7 @@ const NEON_MAGENTA := Color(1.0, 0.12, 0.65, 1.0)
 
 var animation_time := 0.0
 var motion_amount := 0.0
+var redraw_elapsed := 0.0
 
 func _process(delta: float) -> void:
 	var body := get_parent() as CharacterBody2D
@@ -15,7 +16,10 @@ func _process(delta: float) -> void:
 	rotation = lerp_angle(rotation, target_tilt, 1.0 - exp(-8.0 * delta))
 	var pulse := sin(animation_time * 2.0) * 0.015 * motion_amount
 	scale = Vector2(1.0 + pulse, 1.0 - pulse)
-	queue_redraw()
+	redraw_elapsed += delta
+	if redraw_elapsed >= 1.0 / 30.0:
+		redraw_elapsed = 0.0
+		queue_redraw()
 
 func _draw() -> void:
 	# Soft outer silhouette and armored shell.
@@ -34,4 +38,3 @@ func _draw() -> void:
 	draw_circle(Vector2(-1.5, -1.5), 1.7, Color(0.8, 1.0, 1.0, 1.0), true, -1.0, true)
 	draw_line(Vector2(-14, 5), Vector2(-8, 3), NEON_MAGENTA, 2.0, true)
 	draw_line(Vector2(10, -7), Vector2(15, -10), NEON_CYAN, 2.0, true)
-

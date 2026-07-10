@@ -9,6 +9,7 @@ const HIGHLIGHT_COLOR := Color(1.0, 0.55, 0.62, 0.95)
 var mode := 0
 var elapsed := 0.0
 var enemy_radius := 19.0
+var redraw_elapsed := 0.0
 
 func configure(effect_mode: int, radius := 19.0) -> void:
 	mode = clampi(effect_mode, 0, 2)
@@ -20,7 +21,10 @@ func _process(delta: float) -> void:
 	if elapsed >= DURATION:
 		queue_free()
 		return
-	queue_redraw()
+	redraw_elapsed += delta
+	if redraw_elapsed >= 1.0 / 30.0:
+		redraw_elapsed = 0.0
+		queue_redraw()
 
 func _draw() -> void:
 	var progress := clampf(elapsed / DURATION, 0.0, 1.0)
