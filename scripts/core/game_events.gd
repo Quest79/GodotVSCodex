@@ -1,6 +1,7 @@
 extends Node
 
 enum EnemyDeathEffect { RADIAL_SHATTER, SPIRAL_SHATTER, IMPLOSION_SHATTER }
+enum BurningEffectStyle { CINDER_BURST, CINDER_RING, CINDER_CROWN, CINDER_COIL, CINDER_SCATTER, CINDER_HEARTH }
 
 const BASE_RENDER_SIZE := Vector2i(1920, 1080)
 const KEYBINDS_PATH := "user://keybinds.cfg"
@@ -9,7 +10,10 @@ const SETTINGS_PATH := "user://settings.cfg"
 const SETTINGS_SECTION := "settings"
 const CAMERA_ZOOM_STEPS := [0.5, 0.7, 1.0, 1.5, 2.0]
 
+signal dash_cooldowns_changed(cooldowns: Array[float])
+
 var enemy_death_effect := EnemyDeathEffect.RADIAL_SHATTER
+var burning_effect_style := BurningEffectStyle.CINDER_SCATTER
 var game_speed_percent := 200.0
 var game_speed_active := false
 var rendering_scale_percent := 100.0
@@ -32,6 +36,7 @@ func _ready() -> void:
 func save_settings() -> void:
 	var config := ConfigFile.new()
 	config.set_value(SETTINGS_SECTION, "enemy_death_effect", enemy_death_effect)
+	config.set_value(SETTINGS_SECTION, "burning_effect_style", burning_effect_style)
 	config.set_value(SETTINGS_SECTION, "game_speed_percent", game_speed_percent)
 	config.set_value(SETTINGS_SECTION, "rendering_scale_percent", rendering_scale_percent)
 	config.set_value(SETTINGS_SECTION, "camera_zoom", camera_zoom)
@@ -47,6 +52,11 @@ func _load_settings() -> void:
 		int(config.get_value(SETTINGS_SECTION, "enemy_death_effect", enemy_death_effect)),
 		EnemyDeathEffect.RADIAL_SHATTER,
 		EnemyDeathEffect.IMPLOSION_SHATTER
+	)
+	burning_effect_style = clampi(
+		int(config.get_value(SETTINGS_SECTION, "burning_effect_style", burning_effect_style)),
+		BurningEffectStyle.CINDER_BURST,
+		BurningEffectStyle.CINDER_HEARTH
 	)
 	game_speed_percent = clampf(float(config.get_value(SETTINGS_SECTION, "game_speed_percent", game_speed_percent)), 25.0, 500.0)
 	rendering_scale_percent = clampf(float(config.get_value(SETTINGS_SECTION, "rendering_scale_percent", rendering_scale_percent)), 25.0, 200.0)
@@ -82,7 +92,7 @@ func _load_keybinds() -> void:
 		return
 	for action_name in config.get_section_keys(KEYBINDS_SECTION):
 		var action := StringName(action_name)
-		if action != &"cycle_camera_zoom":
+		if action not in [&"cycle_camera_zoom", &"pause_game", &"dash", &"toggle_game_speed"]:
 			continue
 		var physical_keycode := int(config.get_value(KEYBINDS_SECTION, action_name, KEY_NONE)) as Key
 		set_keyboard_binding(action, physical_keycode)
@@ -144,12 +154,17 @@ func _set_render_target_size() -> void:
 		window.current_screen
 	)
 
+
 signal player_health_changed(current: float, maximum: float)
 signal progression_changed(xp: int, required: int, level: int)
 signal xp_collected(amount: int)
 signal enemy_defeated
+signal enemy_defeated_details(is_boss: bool)
+signal damage_dealt(amount: float, source: String)
+signal upgrade_applied(upgrade_id: StringName)
 signal run_stats_changed(score: int, wave: int, attack_rate: float, movement_speed: float, health_regen: float, attack_name: String, projectile_penetration: int, projectile_count: int, main_attack_dps: float)
 signal level_up_requested(level: int)
 signal upgrade_cancelled
 signal player_died
 signal upgrade_selected(upgrade_id: StringName)
+signal unobstructed_pause_changed(is_paused: bool)

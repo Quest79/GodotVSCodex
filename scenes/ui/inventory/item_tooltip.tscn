@@ -3,10 +3,10 @@
 [ext_resource type="Script" path="res://scenes/ui/inventory/item_tooltip.gd" id="1"]
 
 [node name="ItemTooltip" type="Control"]
-custom_minimum_size = Vector2(320, 281.5)
+custom_minimum_size = Vector2(394.5, 485)
 layout_mode = 3
 anchors_preset = 0
-offset_right = 320.0
-offset_bottom = 281.5
+offset_right = 394.5
+offset_bottom = 485.0
 mouse_filter = 2
 script = ExtResource("1")

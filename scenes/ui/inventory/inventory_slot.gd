@@ -5,6 +5,7 @@ const ITEM_TOOLTIP_SCENE := preload("res://scenes/ui/inventory/item_tooltip.tscn
 
 signal drop_requested(data: Dictionary, target_kind: StringName, target_key: Variant)
 signal socket_clicked(item: Resource, socket_index: int)
+signal delete_requested(source_kind: StringName, source_key: Variant)
 
 var container_kind := &"inventory"
 var slot_key: Variant = -1
@@ -29,6 +30,16 @@ func configure(index: int, type: StringName, display_name: String = "") -> void:
 func set_item(new_item: Resource) -> void:
 	item = new_item
 	_show_item()
+
+func _gui_input(event: InputEvent) -> void:
+	if not item or not event is InputEventMouseButton:
+		return
+	var mouse_event := event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_LEFT or not mouse_event.pressed:
+		return
+	if mouse_event.ctrl_pressed and mouse_event.shift_pressed and mouse_event.alt_pressed:
+		delete_requested.emit(container_kind, slot_key)
+		accept_event()
 
 func _get_drag_data(position: Vector2) -> Variant:
 	if not item:

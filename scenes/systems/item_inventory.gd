@@ -6,8 +6,6 @@ signal equipment_changed(modifiers: Dictionary[StringName, float])
 signal skill_loadout_changed(loadout: Dictionary)
 
 const ItemInstanceScript = preload("res://scripts/items/item_instance.gd")
-const SAVE_PATH := "user://equipment_inventory.json"
-const SAVE_VERSION := 1
 
 @export var capacity := 60
 @export var starter_items: Array[Resource] = []
@@ -50,98 +48,20 @@ func clear_saved_run() -> void:
 	# Disable persistence first so freeing the old scene cannot recreate the
 	# save through NOTIFICATION_PREDELETE after it has been removed.
 	persistence_ready = false
-	if FileAccess.file_exists(SAVE_PATH):
-		var error := DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
-		if error != OK:
-			push_warning("Could not clear saved equipment and inventory: %s" % error)
+	InventoryPersistence.clear()
 
 func _save_inventory() -> void:
 	if not persistence_ready:
 		return
-	var inventory_data: Array = []
-	for item in inventory:
-		inventory_data.append(_serialize_item(item))
-	var equipment_data := {}
-	for slot in equipment:
-		equipment_data[String(slot)] = _serialize_item(equipment[slot])
-	var save_data := {
-		"version": SAVE_VERSION,
-		"capacity": capacity,
-		"inventory": inventory_data,
-		"equipment": equipment_data,
-	}
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if not file:
-		push_warning("Could not save equipment and inventory: %s" % FileAccess.get_open_error())
-		return
-	file.store_string(JSON.stringify(save_data))
+	InventoryPersistence.save(capacity, inventory, equipment)
 
 func _load_inventory() -> bool:
-	if not FileAccess.file_exists(SAVE_PATH):
+	var loaded_state := InventoryPersistence.load(capacity, equipment)
+	if loaded_state.is_empty():
 		return false
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
-	if not file:
-		push_warning("Could not open equipment save: %s" % FileAccess.get_open_error())
-		return false
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if not parsed is Dictionary or int(parsed.get("version", 0)) != SAVE_VERSION:
-		push_warning("Equipment save is invalid or from an unsupported version.")
-		return false
-	var saved_inventory: Array = parsed.get("inventory", [])
-	for index in mini(inventory.size(), saved_inventory.size()):
-		var item := _deserialize_item(saved_inventory[index])
-		inventory[index] = item
-		_update_inventory_location(index)
-	var saved_equipment: Dictionary = parsed.get("equipment", {})
-	for slot in equipment:
-		var item := _deserialize_item(saved_equipment.get(String(slot), null))
-		if item and not item.can_equip_to(slot):
-			push_warning("Ignored saved item in incompatible equipment slot: %s" % slot)
-			item = null
-		equipment[slot] = item
-		if item:
-			item.inventory_index = -1
-			item.equipped_slot = slot
+	inventory = loaded_state["inventory"]
+	equipment = loaded_state["equipment"]
 	return true
-
-func _serialize_item(item: Resource) -> Variant:
-	if not item or not item.definition:
-		return null
-	var modifiers := {}
-	for stat in item.rolled_modifiers:
-		modifiers[String(stat)] = item.rolled_modifiers[stat]
-	var socket_data: Array = []
-	for gem in item.sockets:
-		socket_data.append(_serialize_item(gem))
-	return {
-		"definition": item.definition.resource_path,
-		"rarity": item.rarity,
-		"rolled_modifiers": modifiers,
-		"sockets": socket_data,
-	}
-
-func _deserialize_item(data: Variant) -> Resource:
-	if not data is Dictionary:
-		return null
-	var definition_path := String(data.get("definition", ""))
-	if definition_path.is_empty() or not ResourceLoader.exists(definition_path):
-		push_warning("Missing saved item definition: %s" % definition_path)
-		return null
-	var definition := load(definition_path) as Resource
-	if not definition:
-		return null
-	var item := ItemInstanceScript.new()
-	item.initialize(definition, int(data.get("rarity", definition.default_rarity)))
-	var saved_modifiers: Dictionary = data.get("rolled_modifiers", {})
-	for stat in saved_modifiers:
-		item.rolled_modifiers[StringName(stat)] = float(saved_modifiers[stat])
-	var saved_sockets: Array = data.get("sockets", [])
-	for socket_index in mini(item.sockets.size(), saved_sockets.size()):
-		var gem := _deserialize_item(saved_sockets[socket_index])
-		if gem and gem.definition is GemDefinition:
-			item.sockets[socket_index] = gem
-			_mark_socketed(gem)
-	return item
 
 func add_item(item: Resource) -> bool:
 	for index in inventory.size():
@@ -168,6 +88,22 @@ func transfer(source_kind: StringName, source_key: Variant, target_kind: StringN
 		return _move_equipment_to_inventory(StringName(source_key), int(target_key))
 	if source_kind == &"equipment" and target_kind == &"equipment":
 		return _swap_equipment(StringName(source_key), StringName(target_key))
+	return false
+
+func delete_item(source_kind: StringName, source_key: Variant) -> bool:
+	if source_kind == &"inventory":
+		var index := int(source_key)
+		if not _valid_inventory_index(index) or not inventory[index]:
+			return false
+		inventory[index] = null
+		_emit_all_changed()
+		return true
+	if source_kind == &"equipment" and equipment.has(source_key):
+		if not equipment[source_key]:
+			return false
+		equipment[source_key] = null
+		_emit_all_changed()
+		return true
 	return false
 
 func get_total_modifiers() -> Dictionary[StringName, float]:

@@ -1,7 +1,7 @@
 class_name XPGem
 extends Area2D
 
-const MAX_XP := 20
+const MAX_XP := 1000
 const SPATIAL_CELL_SIZE := 160.0
 const INTERACTION_CHECK_INTERVAL := 0.2 # Five checks per second maximum.
 const COLLECTION_RADIUS := 26.0 # Player body radius plus gem collision radius.
@@ -96,9 +96,11 @@ func set_xp_value(value: int) -> void:
 func _update_appearance() -> void:
 	value_label.text = str(xp_value)
 	visual.call("set_crystal_state", merged_xp, xp_value)
-	var growth := 1.0 + merged_xp * 0.02
+	# Keep the crystal readable even when it has absorbed hundreds of shards.
+	# The energy level still grows noticeably, but never balloons into the arena.
+	var growth := 1.0 + 0.55 * sqrt(clampf(float(xp_value) / MAX_XP, 0.0, 1.0))
 	visual.scale = Vector2.ONE * growth
-	value_label.add_theme_color_override("font_color", Color("#a9e8ff") if xp_value >= MAX_XP else Color("#c9a8ef").lerp(Color("#9168c7"), minf(merged_xp / 20.0, 1.0)))
+	value_label.add_theme_color_override("font_color", Color("#e8d7ff") if xp_value >= MAX_XP else Color("#c9a8ef").lerp(Color("#9168c7"), clampf(float(xp_value) / MAX_XP, 0.0, 1.0)))
 
 func _find_crystal_target() -> XPGem:
 	if xp_value >= MAX_XP:

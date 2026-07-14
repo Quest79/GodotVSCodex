@@ -1,25 +1,24 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://cu8h03gxa3t4q"]
 
-[ext_resource type="Script" path="res://scenes/combat/projectile.gd" id="1"]
-[ext_resource type="Script" path="res://scenes/combat/projectile_visual.gd" id="2"]
+[ext_resource type="Script" uid="uid://cn6ynnfjtsmgx" path="res://scenes/combat/projectile.gd" id="1"]
+[ext_resource type="Script" uid="uid://bq3xto3wfcyqu" path="res://scenes/combat/projectile_visual.gd" id="2"]
 
 [sub_resource type="CircleShape2D" id="CircleShape_projectile"]
 radius = 7.0
 
-[node name="Projectile" type="Area2D"]
+[node name="Projectile" type="Area2D" unique_id=183079967]
 collision_layer = 0
 collision_mask = 2
 monitorable = false
 script = ExtResource("1")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1230922298]
 shape = SubResource("CircleShape_projectile")
 
-[node name="ShapeCast2D" type="ShapeCast2D" parent="."]
-enabled = true
+[node name="ShapeCast2D" type="ShapeCast2D" parent="." unique_id=188978448]
+shape = SubResource("CircleShape_projectile")
 target_position = Vector2(12, 0)
 collision_mask = 2
-shape = SubResource("CircleShape_projectile")
 
-[node name="Visual" type="Node2D" parent="."]
+[node name="Visual" type="Node2D" parent="." unique_id=275977587]
 script = ExtResource("2")

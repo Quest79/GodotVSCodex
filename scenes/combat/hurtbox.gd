@@ -6,4 +6,3 @@ extends Area2D
 func take_damage(amount: float) -> void:
 	if health_component:
 		health_component.take_damage(amount)
-

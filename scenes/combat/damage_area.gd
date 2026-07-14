@@ -20,5 +20,5 @@ func configure(new_damage: float, new_cooldown: float) -> void:
 func _deal_damage() -> void:
 	for area in get_overlapping_areas():
 		if area.has_method("take_damage"):
+			GameEvents.damage_dealt.emit(damage, "damage_area")
 			area.take_damage(damage)
-

@@ -16,7 +16,7 @@ func supports_skill(skill: GemDefinition) -> bool:
 		if not skill.affinities.has(affinity):
 			return false
 	return not required_affinities.is_empty()
-
+	
 func affinity_text() -> String:
 	var names: PackedStringArray = []
 	for affinity in affinities:

@@ -17,8 +17,11 @@ extends CanvasLayer
 @onready var main_attack_dps_label: Label = %MainAttackDPSLabel
 @onready var fps_label: Label = %FPSLabel
 @onready var death_panel: Control = %DeathPanel
+@onready var pause_indicator: Label = %PauseIndicator
+@onready var dash_indicators: Array[ProgressBar] = [%DashIndicator1, %DashIndicator2, %DashIndicator3]
 
 var fps_refresh_elapsed := 0.0
+var health_tween: Tween
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -26,8 +29,12 @@ func _ready() -> void:
 	GameEvents.progression_changed.connect(_on_progression_changed)
 	GameEvents.run_stats_changed.connect(_on_run_stats_changed)
 	GameEvents.player_died.connect(_on_player_died)
+	GameEvents.unobstructed_pause_changed.connect(_on_unobstructed_pause_changed)
+	GameEvents.dash_cooldowns_changed.connect(_on_dash_cooldowns_changed)
 	%RestartButton.pressed.connect(_restart)
+	pause_indicator.hide()
 	call_deferred("_sync_health")
+	call_deferred("_sync_dash_indicators")
 
 func _process(delta: float) -> void:
 	fps_refresh_elapsed += delta
@@ -43,8 +50,27 @@ func _sync_health() -> void:
 
 func _on_health_changed(current: float, maximum: float) -> void:
 	hp_bar.max_value = maximum
-	hp_bar.value = current
-	hp_label.text = "%d / %d  VITALITY" % [ceili(current), ceili(maximum)]
+	if health_tween:
+		health_tween.kill()
+	health_tween = create_tween()
+	health_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	health_tween.tween_method(_set_displayed_health.bind(maximum), hp_bar.value, current, 0.3)
+
+func _set_displayed_health(displayed_current: float, maximum: float) -> void:
+	hp_bar.value = displayed_current
+	hp_label.text = "%d / %d  VITALITY" % [ceili(displayed_current), ceili(maximum)]
+
+func _sync_dash_indicators() -> void:
+	var player := get_tree().get_first_node_in_group("player") as Player
+	if player:
+		_on_dash_cooldowns_changed(player.dash_cooldowns)
+
+func _on_dash_cooldowns_changed(cooldowns: Array[float]) -> void:
+	for index in range(mini(dash_indicators.size(), cooldowns.size())):
+		var readiness := 1.0 - clampf(cooldowns[index] / Player.DASH_RECHARGE_TIME, 0.0, 1.0)
+		var indicator := dash_indicators[index]
+		indicator.value = readiness
+		indicator.modulate = Color.WHITE if readiness >= 1.0 else Color(0.48, 0.62, 0.68, 0.72)
 
 func _on_progression_changed(xp: int, required: int, level: int) -> void:
 	xp_bar.max_value = required
@@ -65,6 +91,9 @@ func _on_run_stats_changed(score: int, wave: int, attack_rate: float, movement_s
 
 func _on_player_died() -> void:
 	death_panel.show()
+
+func _on_unobstructed_pause_changed(is_paused: bool) -> void:
+	pause_indicator.visible = is_paused
 
 func _restart() -> void:
 	get_tree().paused = false

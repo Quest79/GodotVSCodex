@@ -1,6 +1,7 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/pause_menu.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/ui/keybind_screen.tscn" id="2"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_pause_panel"]
 bg_color = Color(0.018, 0.025, 0.043, 0.985)
@@ -167,6 +168,24 @@ theme_override_styles/hover = SubResource("StyleBox_pause_button_hover")
 theme_override_styles/pressed = SubResource("StyleBox_pause_button_pressed")
 theme_override_styles/focus = SubResource("StyleBox_pause_button_focus")
 
+[node name="BurningEffectLabel" type="Label" parent="Center/PausePanel/Margin/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.72, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+text = "BURNING EFFECT STYLE"
+horizontal_alignment = 1
+
+[node name="BurningEffectOption" type="OptionButton" parent="Center/PausePanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBox_pause_button")
+theme_override_styles/hover = SubResource("StyleBox_pause_button_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pause_button_pressed")
+theme_override_styles/focus = SubResource("StyleBox_pause_button_focus")
+
 [node name="GameSpeedHeader" type="HBoxContainer" parent="Center/PausePanel/Margin/Content"]
 layout_mode = 2
 
@@ -261,7 +280,7 @@ theme_override_font_sizes/font_size = 14
 text = "KEYBINDS"
 horizontal_alignment = 1
 
-[node name="CameraZoomKeybindButton" type="Button" parent="Center/PausePanel/Margin/Content"]
+[node name="KeybindsButton" type="Button" parent="Center/PausePanel/Margin/Content"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
@@ -271,7 +290,9 @@ theme_override_styles/normal = SubResource("StyleBox_pause_button")
 theme_override_styles/hover = SubResource("StyleBox_pause_button_hover")
 theme_override_styles/pressed = SubResource("StyleBox_pause_button_pressed")
 theme_override_styles/focus = SubResource("StyleBox_pause_button_focus")
-text = "CYCLE CAMERA ZOOM   [ Z ]"
+text = "KEYBINDS"
+
+[node name="KeybindScreen" parent="." instance=ExtResource("2")]
 
 [node name="ResumeButton" type="Button" parent="Center/PausePanel/Margin/Content"]
 unique_name_in_owner = true

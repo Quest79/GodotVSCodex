@@ -1,23 +1,22 @@
 extends Node2D
 
+const LEVEL_UP_NOVA_FX := preload("res://scenes/combat/level_up_nova_fx.gd")
+
 @onready var player: Player = $Player
 
 var level := 1
 var xp := 0
 var xp_required := 5
-var pending_level_ups := 0
 var score := 0
 var wave := 1
-var choosing_upgrade := false
 var run_ended := false
 
 func _ready() -> void:
 	GameEvents.game_speed_active = false
 	Engine.time_scale = 1.0
+	_reset_player_start()
 	GameEvents.xp_collected.connect(_add_xp)
 	GameEvents.enemy_defeated.connect(_on_enemy_defeated)
-	GameEvents.upgrade_selected.connect(_apply_upgrade)
-	GameEvents.upgrade_cancelled.connect(_cancel_upgrade)
 	GameEvents.player_died.connect(_end_run)
 	$EnemySpawner.wave_changed.connect(_on_wave_changed)
 	$ItemInventory.connect("equipment_changed", _on_equipment_changed)
@@ -26,14 +25,23 @@ func _ready() -> void:
 	call_deferred("_broadcast_run_stats")
 	call_deferred("_sync_equipment")
 	call_deferred("_update_speed_status")
-	GameEvents.call_deferred("apply_camera_zoom")
+
+func _reset_player_start() -> void:
+	# Initialize position and camera before the first rendered frame. Applying
+	# saved camera settings later caused a visible startup jump.
+	player.global_position = Vector2.ZERO
+	player.velocity = Vector2.ZERO
+	var camera := player.get_node_or_null("Camera2D") as Camera2D
+	if camera:
+		camera.zoom = Vector2.ONE * clampf(GameEvents.camera_zoom, 0.5, 2.0)
+		camera.reset_smoothing()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("cycle_camera_zoom") and not choosing_upgrade:
+	if event.is_action_pressed("cycle_camera_zoom"):
 		GameEvents.cycle_camera_zoom()
 		get_viewport().set_input_as_handled()
 		return
-	if not event.is_action_pressed("toggle_game_speed") or run_ended or choosing_upgrade:
+	if not event.is_action_pressed("toggle_game_speed") or run_ended:
 		return
 	GameEvents.game_speed_active = not GameEvents.game_speed_active
 	_apply_game_speed()
@@ -80,33 +88,19 @@ func _add_xp(amount: int) -> void:
 		xp -= xp_required
 		level += 1
 		xp_required = ceili(xp_required * 1.35 + 2.0)
-		pending_level_ups += 1
+		var upgrades := UpgradeCatalog.choices()
+		if not upgrades.is_empty():
+			var upgrade_id: StringName = upgrades.pick_random()
+			player.apply_upgrade(upgrade_id)
+			GameEvents.upgrade_applied.emit(upgrade_id)
+		_spawn_level_up_nova()
 	_broadcast_progression()
-	if pending_level_ups > 0 and not choosing_upgrade:
-		_show_level_up()
-
-func _show_level_up() -> void:
-	choosing_upgrade = true
-	get_tree().paused = true
-	GameEvents.level_up_requested.emit(level)
-
-func _apply_upgrade(upgrade_id: StringName) -> void:
-	if run_ended or not choosing_upgrade:
-		return
-	player.apply_upgrade(upgrade_id)
 	_broadcast_run_stats()
-	pending_level_ups = maxi(pending_level_ups - 1, 0)
-	choosing_upgrade = false
-	if pending_level_ups > 0:
-		call_deferred("_show_level_up")
-	else:
-		get_tree().paused = false
 
-func _cancel_upgrade() -> void:
-	if run_ended or not choosing_upgrade:
-		return
-	choosing_upgrade = false
-	get_tree().paused = false
+func _spawn_level_up_nova() -> void:
+	var nova := LEVEL_UP_NOVA_FX.new() as LevelUpNovaFX
+	get_tree().current_scene.add_child(nova)
+	nova.global_position = player.global_position
 
 func _end_run() -> void:
 	run_ended = true
