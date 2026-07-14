@@ -17,6 +17,8 @@ var homing_target_ref: WeakRef
 var homing_strength := 0.0
 var burn_duration := 0.0
 var burn_damage_per_second := 0.0
+var chill_duration := 0.0
+var freeze_buildup_multiplier := 0.0
 var recent_hit_target_ref: WeakRef
 var recent_hit_reacquire_delay := 0.0
 var flight_time := 0.0
@@ -29,7 +31,7 @@ var exploded := false
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 
-func setup(new_direction: Vector2, new_damage: float, new_speed: float, size_scale: float, new_lifetime := 2.0, pierce_count := 0, new_explosion_radius := 0.0, new_skill_id := &"default_attack", new_homing_target: Node2D = null, new_homing_strength := 0.0, new_burn_duration := 0.0, new_burn_damage_per_second := 0.0) -> void:
+func setup(new_direction: Vector2, new_damage: float, new_speed: float, size_scale: float, new_lifetime := 2.0, pierce_count := 0, new_explosion_radius := 0.0, new_skill_id := &"default_attack", new_homing_target: Node2D = null, new_homing_strength := 0.0, new_burn_duration := 0.0, new_burn_damage_per_second := 0.0, new_chill_duration := 0.0, new_freeze_buildup_multiplier := 0.0) -> void:
 	direction = new_direction.normalized()
 	damage = new_damage
 	speed = new_speed
@@ -42,6 +44,8 @@ func setup(new_direction: Vector2, new_damage: float, new_speed: float, size_sca
 	homing_strength = new_homing_strength
 	burn_duration = new_burn_duration
 	burn_damage_per_second = new_burn_damage_per_second
+	chill_duration = new_chill_duration
+	freeze_buildup_multiplier = new_freeze_buildup_multiplier
 	rotation = direction.angle()
 	$Visual.configure(skill_id)
 
@@ -157,7 +161,9 @@ func _spawn_hit_feedback(target: Node2D, impact_position: Vector2 = Vector2.INF,
 	if target.has_method("apply_projectile_impact"):
 		target.apply_projectile_impact(impact_direction, damage_dealt)
 	var element := _element_for_skill()
-	if not element.is_empty() and burn_duration > 0.0 and target.has_method("apply_elemental_affliction"):
+	if element == &"chilled" and chill_duration > 0.0 and target.has_method("apply_cold_ailments"):
+		target.call("apply_cold_ailments", damage_dealt, chill_duration, freeze_buildup_multiplier)
+	elif not element.is_empty() and burn_duration > 0.0 and target.has_method("apply_elemental_affliction"):
 		var affliction_key := "%s:%s" % [target.get_instance_id(), element]
 		var next_allowed_time := float(affliction_target_expiry.get(affliction_key, -INF))
 		if flight_time >= next_allowed_time:
@@ -180,7 +186,7 @@ func _element_for_skill() -> StringName:
 	match skill_id:
 		&"fireball", &"fire":
 			return &"burning"
-		&"ice", &"frost", &"blizzard":
+		&"ice", &"frost", &"blizzard", &"ice_shard":
 			return &"chilled"
 		&"lightning", &"storm", &"shock":
 			return &"shocked"

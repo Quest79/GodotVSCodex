@@ -9,6 +9,9 @@ const DASH_DURATION := 0.7
 const DASH_RECHARGE_TIME := 2.5
 const DASH_MAX_CHARGES := 3
 const DASH_INITIAL_SPEED := 1500.0
+const DASH_STEERING_RESPONSE := 14.0
+const DASH_REVERSE_INPUT_DOT_LIMIT := -0.75
+const BODY_RADIUS := 16.0
 
 @onready var health: HealthComponent = $HealthComponent
 @onready var weapon: AutoWeapon = $AutoWeapon
@@ -18,10 +21,12 @@ var equipment_modifiers: Dictionary[StringName, float] = {}
 var dash_cooldowns: Array[float] = [0.0, 0.0, 0.0]
 var dash_elapsed := 0.0
 var dash_direction := Vector2.RIGHT
+var dash_start_direction := Vector2.RIGHT
 
 func _ready() -> void:
 	stats = base_stats.duplicate(true)
 	health.health_changed.connect(_on_health_changed)
+	health.damaged.connect(_on_damaged)
 	health.died.connect(_on_died)
 	health.configure(stats.max_health)
 	weapon.configure(stats.damage, stats.cooldown)
@@ -39,6 +44,7 @@ func _physics_process(delta: float) -> void:
 		var progress := 1.0 - clampf(dash_elapsed / DASH_DURATION, 0.0, 1.0)
 		var dash_speed := DASH_INITIAL_SPEED * pow(1.0 - progress, 2.6)
 		if input != Vector2.ZERO:
+			_update_dash_steering(input, delta)
 			dash_speed = maxf(dash_speed, desired_velocity.length())
 		velocity = dash_direction * dash_speed
 		dash_elapsed = maxf(dash_elapsed - delta, 0.0)
@@ -58,9 +64,19 @@ func _start_dash(input: Vector2, dash_index: int) -> void:
 		dash_direction = velocity.normalized()
 	if dash_direction == Vector2.ZERO:
 		dash_direction = Vector2.RIGHT
+	dash_start_direction = dash_direction
 	dash_cooldowns[dash_index] = DASH_RECHARGE_TIME
 	dash_elapsed = DASH_DURATION
 	GameEvents.dash_cooldowns_changed.emit(dash_cooldowns.duplicate())
+
+func _update_dash_steering(input: Vector2, delta: float) -> void:
+	var requested_direction := input.normalized()
+	# Keep the dash committed enough that pressing directly backward cannot
+	# instantly flip its momentum, while allowing every side/diagonal correction.
+	if requested_direction.dot(dash_start_direction) <= DASH_REVERSE_INPUT_DOT_LIMIT:
+		return
+	var steering_weight := clampf(DASH_STEERING_RESPONSE * delta, 0.0, 1.0)
+	dash_direction = dash_direction.lerp(requested_direction, steering_weight).normalized()
 
 func _get_available_dash_index() -> int:
 	for index in range(DASH_MAX_CHARGES):
@@ -91,6 +107,10 @@ func get_body_mass() -> float:
 	# A softened size curve keeps enemies twice the player's size pushable,
 	# while still making larger bodies feel meaningfully heavier.
 	return maxf(pow(body_scale, 1.6), 0.05)
+
+func get_body_radius() -> float:
+	var body_scale := maxf(absf(global_scale.x), absf(global_scale.y))
+	return BODY_RADIUS * body_scale
 
 func collect_xp(amount: int) -> void:
 	GameEvents.xp_collected.emit(amount)
@@ -140,6 +160,9 @@ func apply_skill_loadout(loadout: Dictionary) -> void:
 
 func _on_health_changed(current: float, maximum: float) -> void:
 	GameEvents.player_health_changed.emit(current, maximum)
+
+func _on_damaged(amount: float) -> void:
+	GameEvents.player_damaged.emit(amount)
 
 func _on_died() -> void:
 	set_physics_process(false)

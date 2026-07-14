@@ -4,6 +4,7 @@ extends Control
 @onready var panel: PanelContainer = %PausePanel
 @onready var resume_button: Button = %ResumeButton
 @onready var keybind_screen: KeybindScreen = $KeybindScreen
+@onready var challenge_screen: ChallengeScreen = $ChallengeScreen
 
 const MENU_SCALE := Vector2(0.7, 0.7)
 
@@ -17,7 +18,9 @@ func _ready() -> void:
 	%PauseRestartButton.pressed.connect(_restart)
 	%QuitButton.pressed.connect(_quit)
 	%KeybindsButton.pressed.connect(_open_keybind_screen)
+	%ChallengesButton.pressed.connect(_open_challenge_screen)
 	keybind_screen.closed.connect(_close_keybind_screen)
+	challenge_screen.closed.connect(_close_challenge_screen)
 	%DeathEffectOption.clear()
 	%DeathEffectOption.add_item("Radial Shatter", GameEvents.EnemyDeathEffect.RADIAL_SHATTER)
 	%DeathEffectOption.add_item("Spiral Shatter", GameEvents.EnemyDeathEffect.SPIRAL_SHATTER)
@@ -33,6 +36,22 @@ func _ready() -> void:
 	%BurningEffectOption.add_item("Cinder Hearth", GameEvents.BurningEffectStyle.CINDER_HEARTH)
 	%BurningEffectOption.select(GameEvents.burning_effect_style)
 	%BurningEffectOption.item_selected.connect(_on_burning_effect_selected)
+	%FireballEffectOption.clear()
+	%FireballEffectOption.add_item("Original Fireball", GameEvents.FireballVisualStyle.ORIGINAL)
+	%FireballEffectOption.add_item("Ember Comet", GameEvents.FireballVisualStyle.EMBER_COMET)
+	%FireballEffectOption.add_item("White-Hot Comet", GameEvents.FireballVisualStyle.WHITE_HOT_COMET)
+	%FireballEffectOption.add_item("Pixel Inferno", GameEvents.FireballVisualStyle.PIXEL_INFERNO)
+	%FireballEffectOption.add_item("Solar Flare", GameEvents.FireballVisualStyle.SOLAR_FLARE)
+	%FireballEffectOption.add_item("Crimson Soulfire", GameEvents.FireballVisualStyle.SOULFIRE)
+	%FireballEffectOption.add_separator("REALISTIC WORLD-SPACE TRAILS")
+	%FireballEffectOption.add_item("Wildfire", GameEvents.FireballVisualStyle.WILDFIRE)
+	%FireballEffectOption.add_item("Volcanic Blaze", GameEvents.FireballVisualStyle.VOLCANIC_BLAZE)
+	%FireballEffectOption.add_item("Dragon Fire", GameEvents.FireballVisualStyle.DRAGON_FIRE)
+	%FireballEffectOption.add_item("Phoenix Flame", GameEvents.FireballVisualStyle.PHOENIX_FLAME)
+	%FireballEffectOption.add_item("Ashen Inferno", GameEvents.FireballVisualStyle.ASHEN_INFERNO)
+	var fireball_option_index: int = %FireballEffectOption.get_item_index(GameEvents.fireball_visual_style)
+	%FireballEffectOption.select(fireball_option_index)
+	%FireballEffectOption.item_selected.connect(_on_fireball_effect_selected)
 	%GameSpeedSlider.value = GameEvents.game_speed_percent
 	%GameSpeedSlider.value_changed.connect(_on_game_speed_changed)
 	_update_game_speed_label(GameEvents.game_speed_percent)
@@ -42,11 +61,16 @@ func _ready() -> void:
 	%CameraZoomSlider.value = GameEvents.camera_zoom
 	%CameraZoomSlider.value_changed.connect(_on_camera_zoom_changed)
 	_update_camera_zoom_label(GameEvents.camera_zoom)
+	%AchievementVolumeSlider.value = GameEvents.achievement_alert_volume_percent
+	%AchievementVolumeSlider.value_changed.connect(_on_achievement_volume_changed)
+	_update_achievement_volume_label(GameEvents.achievement_alert_volume_percent)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause_game"):
 		if keybind_screen.visible:
 			keybind_screen.close()
+		if challenge_screen.visible:
+			challenge_screen.close()
 		if is_open:
 			_close()
 		else:
@@ -67,11 +91,21 @@ func _open_keybind_screen() -> void:
 	panel.hide()
 	keybind_screen.open()
 
+func _open_challenge_screen() -> void:
+	panel.hide()
+	challenge_screen.open()
+
 func _close_keybind_screen() -> void:
 	keybind_screen.hide()
 	if is_open:
 		panel.show()
 		resume_button.grab_focus()
+
+func _close_challenge_screen() -> void:
+	challenge_screen.hide()
+	if is_open:
+		panel.show()
+		%ChallengesButton.grab_focus()
 
 func _can_open() -> bool:
 	var ui := get_parent()
@@ -85,6 +119,7 @@ func _open() -> void:
 	get_tree().paused = true
 	GameEvents.unobstructed_pause_changed.emit(false)
 	keybind_screen.hide()
+	challenge_screen.hide()
 	panel.show()
 	show()
 	panel.modulate.a = 0.0
@@ -101,6 +136,7 @@ func _close() -> void:
 		return
 	is_open = false
 	keybind_screen.hide()
+	challenge_screen.hide()
 	hide()
 	get_tree().paused = was_paused_before_open
 	GameEvents.unobstructed_pause_changed.emit(get_tree().paused)
@@ -127,6 +163,10 @@ func _on_death_effect_selected(index: int) -> void:
 
 func _on_burning_effect_selected(index: int) -> void:
 	GameEvents.burning_effect_style = %BurningEffectOption.get_item_id(index)
+	GameEvents.save_settings()
+
+func _on_fireball_effect_selected(index: int) -> void:
+	GameEvents.fireball_visual_style = %FireballEffectOption.get_item_id(index)
 	GameEvents.save_settings()
 
 func _on_game_speed_changed(value: float) -> void:
@@ -159,3 +199,11 @@ func _on_camera_zoom_changed(value: float) -> void:
 
 func _update_camera_zoom_label(value: float) -> void:
 	%CameraZoomValue.text = "%.2fx" % value
+
+func _on_achievement_volume_changed(value: float) -> void:
+	GameEvents.achievement_alert_volume_percent = value
+	GameEvents.save_settings()
+	_update_achievement_volume_label(value)
+
+func _update_achievement_volume_label(value: float) -> void:
+	%AchievementVolumeValue.text = "MUTED" if value <= 0.0 else "%d%%" % roundi(value)

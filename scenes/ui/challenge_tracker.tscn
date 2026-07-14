@@ -1,0 +1,72 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/challenge_tracker.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="Panel"]
+bg_color = Color(0.018, 0.028, 0.042, 0.83)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.72, 0.36, 0.1, 0.68)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[node name="ChallengeTracker" type="PanelContainer"]
+offset_left = 1538.0
+offset_top = 30.0
+offset_right = 1888.0
+offset_bottom = 178.0
+script = ExtResource("1")
+theme_override_styles/panel = SubResource("Panel")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 12
+
+[node name="Content" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Header" type="HBoxContainer" parent="Margin/Content"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Margin/Content/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.65, 0.27, 1)
+theme_override_font_sizes/font_size = 14
+text = "CHALLENGE RUN"
+
+[node name="Timer" type="Label" parent="Margin/Content/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.79, 0.96, 0.87, 1)
+theme_override_font_sizes/font_size = 18
+text = "00:00.0"
+
+[node name="Century" type="Label" parent="Margin/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.78, 0.81, 1)
+theme_override_font_sizes/font_size = 13
+text = "CENTURY SWEEP   0 / 100"
+
+[node name="Boss" type="Label" parent="Margin/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.78, 0.81, 1)
+theme_override_font_sizes/font_size = 13
+text = "BOSS DEADLINE   RUNNING"
+
+[node name="Untouchable" type="Label" parent="Margin/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.47, 0.94, 0.78, 1)
+theme_override_font_sizes/font_size = 13
+text = "UNTOUCHABLE   ACTIVE"

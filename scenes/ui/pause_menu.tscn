@@ -1,7 +1,8 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/pause_menu.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/ui/keybind_screen.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/ui/challenge_screen.tscn" id="3"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_pause_panel"]
 bg_color = Color(0.018, 0.025, 0.043, 0.985)
@@ -186,6 +187,24 @@ theme_override_styles/hover = SubResource("StyleBox_pause_button_hover")
 theme_override_styles/pressed = SubResource("StyleBox_pause_button_pressed")
 theme_override_styles/focus = SubResource("StyleBox_pause_button_focus")
 
+[node name="FireballEffectLabel" type="Label" parent="Center/PausePanel/Margin/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.72, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+text = "FIREBALL APPEARANCE"
+horizontal_alignment = 1
+
+[node name="FireballEffectOption" type="OptionButton" parent="Center/PausePanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 1, 0.97, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBox_pause_button")
+theme_override_styles/hover = SubResource("StyleBox_pause_button_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pause_button_pressed")
+theme_override_styles/focus = SubResource("StyleBox_pause_button_focus")
+
 [node name="GameSpeedHeader" type="HBoxContainer" parent="Center/PausePanel/Margin/Content"]
 layout_mode = 2
 
@@ -273,12 +292,52 @@ value = 0.7
 allow_greater = false
 allow_lesser = false
 
+[node name="AchievementVolumeHeader" type="HBoxContainer" parent="Center/PausePanel/Margin/Content"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Center/PausePanel/Margin/Content/AchievementVolumeHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.72, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+text = "ACHIEVEMENT ALERT VOLUME"
+
+[node name="AchievementVolumeValue" type="Label" parent="Center/PausePanel/Margin/Content/AchievementVolumeHeader"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.68, 0.34, 1)
+theme_override_font_sizes/font_size = 17
+text = "65%"
+horizontal_alignment = 2
+
+[node name="AchievementVolumeSlider" type="HSlider" parent="Center/PausePanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+max_value = 100.0
+step = 5.0
+value = 65.0
+allow_greater = false
+allow_lesser = false
+
 [node name="KeybindLabel" type="Label" parent="Center/PausePanel/Margin/Content"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.72, 0.75, 1)
 theme_override_font_sizes/font_size = 14
 text = "KEYBINDS"
 horizontal_alignment = 1
+
+[node name="ChallengesButton" type="Button" parent="Center/PausePanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.56, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBox_pause_button")
+theme_override_styles/hover = SubResource("StyleBox_pause_button_hover")
+theme_override_styles/pressed = SubResource("StyleBox_pause_button_pressed")
+theme_override_styles/focus = SubResource("StyleBox_pause_button_focus")
+text = "CHALLENGES & ACHIEVEMENTS"
 
 [node name="KeybindsButton" type="Button" parent="Center/PausePanel/Margin/Content"]
 unique_name_in_owner = true
@@ -293,6 +352,8 @@ theme_override_styles/focus = SubResource("StyleBox_pause_button_focus")
 text = "KEYBINDS"
 
 [node name="KeybindScreen" parent="." instance=ExtResource("2")]
+
+[node name="ChallengeScreen" parent="." instance=ExtResource("3")]
 
 [node name="ResumeButton" type="Button" parent="Center/PausePanel/Margin/Content"]
 unique_name_in_owner = true

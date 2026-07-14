@@ -3,21 +3,26 @@ extends Node2D
 
 const BURNING := &"burning"
 const CHILLED := &"chilled"
+const FROZEN := &"frozen"
 const SHOCKED := &"shocked"
 const FULL_PARTICLE_BUDGET_BURNING_ENEMIES := 3
+const FULL_PARTICLE_BUDGET_COLD_ENEMIES := 8
 const MIN_PARTICLE_BUDGET_SCALE := 0.16
 
 static var active_burning_effects := 0
+static var active_cold_effects := 0
 
 var afflictions: Dictionary = {}
 var active := false
 var elapsed := 0.0
 var redraw_elapsed := 0.0
 var burning_budget_registered := false
+var cold_budget_registered := false
 
 func configure(new_afflictions: Dictionary) -> void:
 	afflictions = new_afflictions.duplicate(true)
 	_set_burning_budget_registration(afflictions.has(BURNING))
+	_set_cold_budget_registration(afflictions.has(CHILLED) or afflictions.has(FROZEN))
 	active = not afflictions.is_empty()
 	visible = active
 	queue_redraw()
@@ -25,12 +30,14 @@ func configure(new_afflictions: Dictionary) -> void:
 func clear() -> void:
 	afflictions.clear()
 	_set_burning_budget_registration(false)
+	_set_cold_budget_registration(false)
 	active = false
 	visible = false
 	queue_redraw()
 
 func _exit_tree() -> void:
 	_set_burning_budget_registration(false)
+	_set_cold_budget_registration(false)
 
 func _process(delta: float) -> void:
 	if not active:
@@ -48,6 +55,8 @@ func _draw() -> void:
 		_draw_burning()
 	if afflictions.has(CHILLED):
 		_draw_chilled()
+	if afflictions.has(FROZEN):
+		_draw_frozen()
 	if afflictions.has(SHOCKED):
 		_draw_shocked()
 
@@ -192,12 +201,26 @@ func _scaled_particle_count(full_count: int) -> int:
 	var scale := maxf(MIN_PARTICLE_BUDGET_SCALE, float(FULL_PARTICLE_BUDGET_BURNING_ENEMIES) / float(active_burning_effects))
 	return maxi(4, roundi(float(full_count) * scale))
 
+func _set_cold_budget_registration(has_cold: bool) -> void:
+	if cold_budget_registered == has_cold:
+		return
+	cold_budget_registered = has_cold
+	active_cold_effects += 1 if has_cold else -1
+	active_cold_effects = maxi(active_cold_effects, 0)
+
+func _scaled_cold_count(full_count: int) -> int:
+	if active_cold_effects <= FULL_PARTICLE_BUDGET_COLD_ENEMIES:
+		return full_count
+	var scale := maxf(MIN_PARTICLE_BUDGET_SCALE, float(FULL_PARTICLE_BUDGET_COLD_ENEMIES) / float(active_cold_effects))
+	return maxi(2, roundi(float(full_count) * scale))
+
 func _draw_chilled() -> void:
 	var pulse := sin(elapsed * 4.0) * 2.0
 	draw_circle(Vector2.ZERO, 23.0 + pulse, Color(0.1, 0.65, 1.0, 0.1))
 	draw_arc(Vector2.ZERO, 22.0 + pulse, elapsed * 0.6, elapsed * 0.6 + TAU * 0.78, 24, Color(0.35, 0.88, 1.0, 0.82), 2.0, true)
-	for crystal_index in 6:
-		var angle := TAU * float(crystal_index) / 6.0 - elapsed * 0.35
+	var crystal_count := _scaled_cold_count(6)
+	for crystal_index in crystal_count:
+		var angle := TAU * float(crystal_index) / float(crystal_count) - elapsed * 0.35
 		var direction := Vector2.from_angle(angle)
 		var center := direction * 16.0
 		var tangent := Vector2(-direction.y, direction.x)
@@ -210,11 +233,31 @@ func _draw_chilled() -> void:
 		])
 		draw_colored_polygon(points, Color(0.16, 0.66, 1.0, 0.78))
 		draw_line(center - direction * size, center + direction * size, Color(0.86, 1.0, 1.0, 0.9), 1.2, true)
-	for flake_index in 8:
-		var angle := TAU * float(flake_index) / 8.0 + elapsed * 0.45
+	var flake_count := _scaled_cold_count(8)
+	for flake_index in flake_count:
+		var angle := TAU * float(flake_index) / float(flake_count) + elapsed * 0.45
 		var point := Vector2.from_angle(angle) * (25.0 + sin(elapsed * 3.0 + flake_index) * 3.0)
 		draw_line(point - Vector2(2.5, 0), point + Vector2(2.5, 0), Color(0.7, 0.95, 1.0, 0.72), 1.0, true)
 		draw_line(point - Vector2(0, 2.5), point + Vector2(0, 2.5), Color(0.7, 0.95, 1.0, 0.72), 1.0, true)
+
+func _draw_frozen() -> void:
+	var pulse := 1.0 + sin(elapsed * 8.0) * 0.035
+	draw_circle(Vector2.ZERO, 25.0 * pulse, Color(0.35, 0.88, 1.0, 0.2))
+	draw_arc(Vector2.ZERO, 24.0 * pulse, 0.0, TAU, 32, Color(0.82, 0.98, 1.0, 0.92), 3.0, true)
+	var crystal_count := _scaled_cold_count(8)
+	for crystal_index in crystal_count:
+		var angle := TAU * float(crystal_index) / float(crystal_count)
+		var direction := Vector2.from_angle(angle)
+		var tangent := direction.orthogonal()
+		var base := direction * 17.0
+		var points := PackedVector2Array([
+			base + direction * 10.0,
+			base + tangent * 4.0,
+			base - direction * 7.0,
+			base - tangent * 4.0,
+		])
+		draw_colored_polygon(points, Color(0.35, 0.82, 1.0, 0.72))
+		draw_line(base - direction * 6.0, base + direction * 9.0, Color(0.92, 1.0, 1.0, 0.95), 1.2, true)
 
 func _draw_shocked() -> void:
 	draw_circle(Vector2.ZERO, 23.0 + sin(elapsed * 16.0) * 2.0, Color(0.66, 0.26, 1.0, 0.1))

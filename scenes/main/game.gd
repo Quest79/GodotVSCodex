@@ -14,6 +14,7 @@ var run_ended := false
 func _ready() -> void:
 	GameEvents.game_speed_active = false
 	Engine.time_scale = 1.0
+	ChallengeSystem.start_run()
 	_reset_player_start()
 	GameEvents.xp_collected.connect(_add_xp)
 	GameEvents.enemy_defeated.connect(_on_enemy_defeated)

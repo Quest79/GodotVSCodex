@@ -1,0 +1,229 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/challenge_screen.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="Panel"]
+bg_color = Color(0.018, 0.025, 0.043, 0.99)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.75, 0.38, 0.12, 0.92)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0, 0, 0.65)
+shadow_size = 20
+
+[sub_resource type="StyleBoxFlat" id="Card"]
+bg_color = Color(0.035, 0.055, 0.075, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.25, 0.38, 0.42, 0.8)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+
+[sub_resource type="StyleBoxFlat" id="Button"]
+bg_color = Color(0.08, 0.12, 0.15, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.75, 0.38, 0.12, 0.9)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="ChallengeScreen" type="Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+process_mode = 3
+script = ExtResource("1")
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(820, 900)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Panel")
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 42
+theme_override_constants/margin_top = 34
+theme_override_constants/margin_right = 42
+theme_override_constants/margin_bottom = 30
+
+[node name="Content" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.78, 0.4, 1)
+theme_override_font_sizes/font_size = 35
+text = "CHALLENGES // ACHIEVEMENTS"
+horizontal_alignment = 1
+
+[node name="RunStatus" type="Label" parent="Center/Panel/Margin/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.47, 0.94, 0.78, 1)
+theme_override_font_sizes/font_size = 16
+text = "NO ACTIVE RUN"
+horizontal_alignment = 1
+
+[node name="ChallengeHeader" type="Label" parent="Center/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.72, 0.76, 1)
+theme_override_font_sizes/font_size = 14
+text = "ACTIVE CHALLENGE RECORDS"
+
+[node name="ChallengeGrid" type="GridContainer" parent="Center/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/h_separation = 12
+columns = 3
+
+[node name="CenturyCard" type="PanelContainer" parent="Center/Panel/Margin/Content/ChallengeGrid"]
+custom_minimum_size = Vector2(230, 116)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Card")
+
+[node name="Text" type="VBoxContainer" parent="Center/Panel/Margin/Content/ChallengeGrid/CenturyCard"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Name" type="Label" parent="Center/Panel/Margin/Content/ChallengeGrid/CenturyCard/Text"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.68, 0.32, 1)
+theme_override_font_sizes/font_size = 18
+text = "CENTURY SWEEP"
+horizontal_alignment = 1
+
+[node name="Goal" type="Label" parent="Center/Panel/Margin/Content/ChallengeGrid/CenturyCard/Text"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.74, 1)
+theme_override_font_sizes/font_size = 13
+text = "KILL 100 MONSTERS"
+horizontal_alignment = 1
+
+[node name="CenturyBest" type="Label" parent="Center/Panel/Margin/Content/ChallengeGrid/CenturyCard/Text"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.95, 0.86, 1)
+theme_override_font_sizes/font_size = 17
+text = "BEST  --:--.-"
+horizontal_alignment = 1
+
+[node name="BossCard" type="PanelContainer" parent="Center/Panel/Margin/Content/ChallengeGrid"]
+custom_minimum_size = Vector2(230, 116)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Card")
+
+[node name="Text" type="VBoxContainer" parent="Center/Panel/Margin/Content/ChallengeGrid/BossCard"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Name" type="Label" parent="Center/Panel/Margin/Content/ChallengeGrid/BossCard/Text"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4, 0.58, 1)
+theme_override_font_sizes/font_size = 18
+text = "BOSS DEADLINE"
+horizontal_alignment = 1
+
+[node name="Goal" type="Label" parent="Center/Panel/Margin/Content/ChallengeGrid/BossCard/Text"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.74, 1)
+theme_override_font_sizes/font_size = 13
+text = "FASTEST FIRST BOSS"
+horizontal_alignment = 1
+
+[node name="BossBest" type="Label" parent="Center/Panel/Margin/Content/ChallengeGrid/BossCard/Text"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.95, 0.86, 1)
+theme_override_font_sizes/font_size = 17
+text = "BEST  --:--.-"
+horizontal_alignment = 1
+
+[node name="UntouchableCard" type="PanelContainer" parent="Center/Panel/Margin/Content/ChallengeGrid"]
+custom_minimum_size = Vector2(230, 116)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Card")
+
+[node name="Text" type="VBoxContainer" parent="Center/Panel/Margin/Content/ChallengeGrid/UntouchableCard"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Name" type="Label" parent="Center/Panel/Margin/Content/ChallengeGrid/UntouchableCard/Text"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.92, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "UNTOUCHABLE"
+horizontal_alignment = 1
+
+[node name="Goal" type="Label" parent="Center/Panel/Margin/Content/ChallengeGrid/UntouchableCard/Text"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.74, 1)
+theme_override_font_sizes/font_size = 13
+text = "100 KILLS, NO DAMAGE"
+horizontal_alignment = 1
+
+[node name="UntouchableBest" type="Label" parent="Center/Panel/Margin/Content/ChallengeGrid/UntouchableCard/Text"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.95, 0.86, 1)
+theme_override_font_sizes/font_size = 17
+text = "BEST  --:--.-"
+horizontal_alignment = 1
+
+[node name="AchievementHeader" type="Label" parent="Center/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.72, 0.76, 1)
+theme_override_font_sizes/font_size = 14
+text = "ACHIEVEMENTS  //  BRONZE • SILVER • GOLD"
+
+[node name="Scroll" type="ScrollContainer" parent="Center/Panel/Margin/Content"]
+custom_minimum_size = Vector2(0, 440)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="AchievementList" type="RichTextLabel" parent="Center/Panel/Margin/Content/Scroll"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(710, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/default_color = Color(0.83, 0.9, 0.91, 1)
+theme_override_font_sizes/normal_font_size = 15
+theme_override_font_sizes/bold_font_size = 17
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+
+[node name="BackButton" type="Button" parent="Center/Panel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 58)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.88, 0.72, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("Button")
+theme_override_styles/hover = SubResource("Button")
+theme_override_styles/focus = SubResource("Button")
+text = "BACK"

@@ -33,10 +33,10 @@ func _attack() -> void:
 	var spread := deg_to_rad(float(skill_config.get(&"spread_degrees", 0.0)))
 	var skill_id := StringName(skill_config.get(&"skill_id", &"default_attack"))
 	var projectile_damage := damage * float(skill_config.get(&"damage_multiplier", 1.0))
-	if skill_id == &"fireball":
+	if skill_config.has(&"damage_min") and skill_config.has(&"damage_max"):
 		projectile_damage = randf_range(
-			float(skill_config.get(&"damage_min", 3.0)),
-			float(skill_config.get(&"damage_max", 6.0))
+			float(skill_config.get(&"damage_min", damage)),
+			float(skill_config.get(&"damage_max", damage))
 		) * float(skill_config.get(&"damage_multiplier", 1.0))
 	for index in projectile_count:
 		var target: Node2D = targets[index % targets.size()]
@@ -59,7 +59,9 @@ func _attack() -> void:
 			target,
 			float(skill_config.get(&"homing_strength", 0.0)),
 			float(skill_config.get(&"affliction_duration", skill_config.get(&"burn_duration", 0.0))) * float(skill_config.get(&"duration_multiplier", 1.0)),
-			float(skill_config.get(&"burn_damage_per_second", 0.0))
+			float(skill_config.get(&"burn_damage_per_second", 0.0)),
+			float(skill_config.get(&"chill_duration", 0.0)) * float(skill_config.get(&"duration_multiplier", 1.0)),
+			float(skill_config.get(&"freeze_buildup_multiplier", 0.0))
 		)
 
 func _find_nearest_enemies(limit: int) -> Array[Enemy]:

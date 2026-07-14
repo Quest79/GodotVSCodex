@@ -2,24 +2,40 @@ extends Node
 
 enum EnemyDeathEffect { RADIAL_SHATTER, SPIRAL_SHATTER, IMPLOSION_SHATTER }
 enum BurningEffectStyle { CINDER_BURST, CINDER_RING, CINDER_CROWN, CINDER_COIL, CINDER_SCATTER, CINDER_HEARTH }
+enum FireballVisualStyle {
+	EMBER_COMET,
+	WHITE_HOT_COMET,
+	PIXEL_INFERNO,
+	SOLAR_FLARE,
+	SOULFIRE,
+	ORIGINAL,
+	WILDFIRE,
+	VOLCANIC_BLAZE,
+	DRAGON_FIRE,
+	PHOENIX_FLAME,
+	ASHEN_INFERNO,
+}
 
 const BASE_RENDER_SIZE := Vector2i(1920, 1080)
 const KEYBINDS_PATH := "user://keybinds.cfg"
 const KEYBINDS_SECTION := "keyboard"
 const SETTINGS_PATH := "user://settings.cfg"
 const SETTINGS_SECTION := "settings"
+const FIREBALL_VISUAL_SETTINGS_VERSION := 2
 const CAMERA_ZOOM_STEPS := [0.5, 0.7, 1.0, 1.5, 2.0]
 
 signal dash_cooldowns_changed(cooldowns: Array[float])
 
 var enemy_death_effect := EnemyDeathEffect.RADIAL_SHATTER
 var burning_effect_style := BurningEffectStyle.CINDER_SCATTER
+var fireball_visual_style := FireballVisualStyle.ORIGINAL
 var game_speed_percent := 200.0
 var game_speed_active := false
 var rendering_scale_percent := 100.0
 var rendering_target_size := BASE_RENDER_SIZE
 var rendering_canvas_scale := 1.0
 var camera_zoom := 0.7
+var achievement_alert_volume_percent := 65.0
 
 func _ready() -> void:
 	_load_settings()
@@ -37,9 +53,12 @@ func save_settings() -> void:
 	var config := ConfigFile.new()
 	config.set_value(SETTINGS_SECTION, "enemy_death_effect", enemy_death_effect)
 	config.set_value(SETTINGS_SECTION, "burning_effect_style", burning_effect_style)
+	config.set_value(SETTINGS_SECTION, "fireball_visual_style", fireball_visual_style)
+	config.set_value(SETTINGS_SECTION, "fireball_visual_style_version", FIREBALL_VISUAL_SETTINGS_VERSION)
 	config.set_value(SETTINGS_SECTION, "game_speed_percent", game_speed_percent)
 	config.set_value(SETTINGS_SECTION, "rendering_scale_percent", rendering_scale_percent)
 	config.set_value(SETTINGS_SECTION, "camera_zoom", camera_zoom)
+	config.set_value(SETTINGS_SECTION, "achievement_alert_volume_percent", achievement_alert_volume_percent)
 	var error := config.save(SETTINGS_PATH)
 	if error != OK:
 		push_warning("Could not save settings: %s" % error)
@@ -58,9 +77,23 @@ func _load_settings() -> void:
 		BurningEffectStyle.CINDER_BURST,
 		BurningEffectStyle.CINDER_HEARTH
 	)
+	var fireball_visual_version := int(config.get_value(SETTINGS_SECTION, "fireball_visual_style_version", 1))
+	if fireball_visual_version < FIREBALL_VISUAL_SETTINGS_VERSION:
+		fireball_visual_style = FireballVisualStyle.ORIGINAL
+	else:
+		fireball_visual_style = clampi(
+			int(config.get_value(SETTINGS_SECTION, "fireball_visual_style", fireball_visual_style)),
+			FireballVisualStyle.EMBER_COMET,
+			FireballVisualStyle.ASHEN_INFERNO
+		)
 	game_speed_percent = clampf(float(config.get_value(SETTINGS_SECTION, "game_speed_percent", game_speed_percent)), 25.0, 500.0)
 	rendering_scale_percent = clampf(float(config.get_value(SETTINGS_SECTION, "rendering_scale_percent", rendering_scale_percent)), 25.0, 200.0)
 	camera_zoom = clampf(float(config.get_value(SETTINGS_SECTION, "camera_zoom", camera_zoom)), 0.5, 2.0)
+	achievement_alert_volume_percent = clampf(
+		float(config.get_value(SETTINGS_SECTION, "achievement_alert_volume_percent", achievement_alert_volume_percent)),
+		0.0,
+		100.0
+	)
 
 func set_keyboard_binding(action: StringName, physical_keycode: Key) -> void:
 	if not InputMap.has_action(action) or physical_keycode == KEY_NONE:
@@ -156,6 +189,7 @@ func _set_render_target_size() -> void:
 
 
 signal player_health_changed(current: float, maximum: float)
+signal player_damaged(amount: float)
 signal progression_changed(xp: int, required: int, level: int)
 signal xp_collected(amount: int)
 signal enemy_defeated

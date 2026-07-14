@@ -4,6 +4,8 @@
 [ext_resource type="Script" path="res://scenes/ui/upgrade_screen.gd" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/ui/inventory/inventory_screen.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/ui/challenge_tracker.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/ui/achievement_popup.tscn" id="6"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_panel"]
 bg_color = Color(0.035, 0.025, 0.045, 0.94)
@@ -556,4 +558,8 @@ layout_mode = 2
 text = "Restart"
 
 [node name="PauseMenu" parent="." instance=ExtResource("4")]
+
+[node name="ChallengeTracker" parent="." instance=ExtResource("5")]
+
+[node name="AchievementPopup" parent="." instance=ExtResource("6")]
 unique_name_in_owner = true

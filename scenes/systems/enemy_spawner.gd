@@ -11,6 +11,7 @@ const VIEW_SPAWN_MARGIN := 110.0
 @export var starting_interval := 0.9
 @export var minimum_interval := 0.18
 @export var max_alive := 180
+@export var first_wave_starting_enemies := 100
 @export var wave_duration := 30.0
 @export var boss_reinforcement_min_delay := 5.0
 @export var boss_reinforcement_max_delay := 8.0
@@ -29,6 +30,12 @@ func _ready() -> void:
 	target = get_tree().get_first_node_in_group("player") as Node2D
 	spawn_timer.wait_time = starting_interval
 	spawn_timer.timeout.connect(_spawn_enemy)
+	call_deferred("_spawn_first_wave")
+
+func _spawn_first_wave() -> void:
+	var opening_count := mini(first_wave_starting_enemies, max_alive)
+	for index in range(opening_count):
+		_spawn_enemy()
 	spawn_timer.start()
 
 func _process(delta: float) -> void:

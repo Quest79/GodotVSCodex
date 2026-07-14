@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="GemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/items/gem_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/ui/gem_icons/ice_shard.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/ui/gem_icons/ice_shard_inventory.png" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"ice_shard"
+display_name = "Ice Shard"
+item_type = 5
+default_rarity = 1
+accent_color = Color(0.2, 0.72, 1, 1)
+inventory_icon = ExtResource("3")
+tooltip_art = ExtResource("2")
+tier_label = "SKILL GEM"
+flavor_text = "Launches splintered ice that chills enemies and builds toward a complete freeze."
+gem_kind = 0
+affinities = Array[StringName]([&"Spell", &"Cold", &"Duration", &"Projectile"])
+skill_id = &"ice_shard"
+effects = Dictionary[StringName, float]({&"chill_duration": 2.0, &"damage_max": 3.0, &"damage_min": 1.0, &"damage_multiplier": 1.0, &"duration_multiplier": 1.0, &"freeze_buildup_multiplier": 1.6, &"pierce": 0.0, &"projectile_count": 1.0, &"projectile_scale": 1.15, &"projectile_speed_multiplier": 0.94, &"spread_degrees": 0.0})

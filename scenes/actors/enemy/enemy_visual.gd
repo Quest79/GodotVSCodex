@@ -9,8 +9,22 @@ const EYE_GLOW := Color("#ffe2a8")
 
 var animation_time := 0.0
 var redraw_elapsed := 0.0
+var procedural_enabled := false
+
+func _ready() -> void:
+	visible = false
+	set_process(false)
+
+func set_procedural_enabled(enabled: bool) -> void:
+	procedural_enabled = enabled
+	visible = enabled
+	set_process(enabled)
+	if enabled:
+		queue_redraw()
 
 func _process(delta: float) -> void:
+	if not procedural_enabled:
+		return
 	var enemy := get_parent() as Enemy
 	var hunt_speed := 0.0
 	var hunt_direction := Vector2.RIGHT
@@ -32,6 +46,8 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 func _draw() -> void:
+	if not procedural_enabled:
+		return
 	var pulse := 0.55 + 0.45 * sin(animation_time * 2.0)
 	# This visual node turns to face its target and lunges forward. Counter both
 	# transforms for the shadow so it remains a fixed, world-aligned oval below

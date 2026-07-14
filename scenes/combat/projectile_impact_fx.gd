@@ -7,13 +7,17 @@ var element := &"arcane"
 var incoming_direction := Vector2.RIGHT
 var radius := 32.0
 var particles: Array[Dictionary] = []
+var fireball_style := 0
 
 func configure(new_skill_id: StringName, new_direction: Vector2, projectile_scale := 1.0) -> void:
 	element = new_skill_id
+	if element == &"fireball" or element == &"fire":
+		fireball_style = GameEvents.fireball_visual_style
 	incoming_direction = new_direction.normalized()
 	radius = maxf(30.0, 27.0 * projectile_scale)
-	for index in 16:
-		var angle := index * TAU / 16.0 + randf_range(-0.12, 0.12)
+	var particle_count := 24 if element == &"fireball" or element == &"fire" else (20 if element == &"ice_shard" else 16)
+	for index in particle_count:
+		var angle := index * TAU / particle_count + randf_range(-0.12, 0.12)
 		particles.append({
 			"angle": angle,
 			"speed": randf_range(42.0, 92.0),
@@ -31,8 +35,29 @@ func _process(delta: float) -> void:
 
 func _palette() -> Array[Color]:
 	if element == &"fireball" or element == &"fire":
+		match fireball_style:
+			GameEvents.FireballVisualStyle.ORIGINAL:
+				return [Color("#ff3b12"), Color("#ff9d24"), Color("#fff2a6")]
+			GameEvents.FireballVisualStyle.WHITE_HOT_COMET:
+				return [Color("#ff4a0b"), Color("#ffd75a"), Color("#ffffff")]
+			GameEvents.FireballVisualStyle.PIXEL_INFERNO:
+				return [Color("#8f0712"), Color("#ff4817"), Color("#ffd34d")]
+			GameEvents.FireballVisualStyle.SOLAR_FLARE:
+				return [Color("#ff7608"), Color("#ffd72d"), Color("#fffbd0")]
+			GameEvents.FireballVisualStyle.SOULFIRE:
+				return [Color("#8f071c"), Color("#e51d32"), Color("#fff0d2")]
+			GameEvents.FireballVisualStyle.WILDFIRE:
+				return [Color("#d92506"), Color("#ff7b0b"), Color("#fff2a1")]
+			GameEvents.FireballVisualStyle.VOLCANIC_BLAZE:
+				return [Color("#61100d"), Color("#d52c0c"), Color("#ffd24b")]
+			GameEvents.FireballVisualStyle.DRAGON_FIRE:
+				return [Color("#e93407"), Color("#ff9414"), Color("#fffbd0")]
+			GameEvents.FireballVisualStyle.PHOENIX_FLAME:
+				return [Color("#f14c06"), Color("#ffb51b"), Color("#ffffcf")]
+			GameEvents.FireballVisualStyle.ASHEN_INFERNO:
+				return [Color("#6b2d21"), Color("#e85d16"), Color("#ffe0a0")]
 		return [Color("#ff3b12"), Color("#ff9d24"), Color("#fff2a6")]
-	if element == &"ice" or element == &"frost":
+	if element == &"ice" or element == &"frost" or element == &"ice_shard":
 		return [Color("#3da9ff"), Color("#a8e8ff"), Color("#f2ffff")]
 	if element == &"lightning" or element == &"storm":
 		return [Color("#9e6cff"), Color("#e3c8ff"), Color("#ffffff")]
@@ -54,5 +79,10 @@ func _draw() -> void:
 		var distance: float = lerpf(5.0, radius * 1.35, progress) * (float(particle["speed"]) / 68.0)
 		var point: Vector2 = Vector2.from_angle(angle) * distance
 		var particle_fade := fade * (0.5 + 0.5 * sin(progress * PI + particle["phase"]))
-		draw_circle(point, particle["size"] * (1.0 - progress * 0.35), Color(colors[1], particle_fade))
+		var particle_size: float = particle["size"] * (1.0 - progress * 0.35)
+		if element == &"fireball" or element == &"fire":
+			var pixel_position := Vector2(roundf(point.x), roundf(point.y))
+			draw_rect(Rect2(pixel_position - Vector2.ONE * particle_size * 0.5, Vector2.ONE * particle_size), Color(colors[1], particle_fade))
+		else:
+			draw_circle(point, particle_size, Color(colors[1], particle_fade))
 		draw_line(point, point - Vector2.from_angle(angle) * 6.0, Color(colors[0], particle_fade * 0.65), 1.0, true)
