@@ -3,6 +3,7 @@ extends Area2D
 
 const FIRE_EXPLOSION_FX := preload("res://scenes/combat/fire_explosion_fx.gd")
 const PROJECTILE_IMPACT_FX := preload("res://scenes/combat/projectile_impact_fx.gd")
+const LIGHTNING_ARC_FX := preload("res://scenes/combat/lightning_arc_fx.gd")
 const HIT_TARGET_REACQUIRE_DELAY := 0.02
 const HIT_TARGET_DAMAGE_COOLDOWN := 0.5
 
@@ -19,6 +20,9 @@ var burn_duration := 0.0
 var burn_damage_per_second := 0.0
 var chill_duration := 0.0
 var freeze_buildup_multiplier := 0.0
+var chain_count := 0
+var chain_radius := 0.0
+var chain_damage_multiplier := 1.0
 var recent_hit_target_ref: WeakRef
 var recent_hit_reacquire_delay := 0.0
 var flight_time := 0.0
@@ -31,7 +35,7 @@ var exploded := false
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 
-func setup(new_direction: Vector2, new_damage: float, new_speed: float, size_scale: float, new_lifetime := 2.0, pierce_count := 0, new_explosion_radius := 0.0, new_skill_id := &"default_attack", new_homing_target: Node2D = null, new_homing_strength := 0.0, new_burn_duration := 0.0, new_burn_damage_per_second := 0.0, new_chill_duration := 0.0, new_freeze_buildup_multiplier := 0.0) -> void:
+func setup(new_direction: Vector2, new_damage: float, new_speed: float, size_scale: float, new_lifetime := 2.0, pierce_count := 0, new_explosion_radius := 0.0, new_skill_id := &"default_attack", new_homing_target: Node2D = null, new_homing_strength := 0.0, new_burn_duration := 0.0, new_burn_damage_per_second := 0.0, new_chill_duration := 0.0, new_freeze_buildup_multiplier := 0.0, new_chain_count := 0, new_chain_radius := 0.0, new_chain_damage_multiplier := 1.0) -> void:
 	direction = new_direction.normalized()
 	damage = new_damage
 	speed = new_speed
@@ -46,6 +50,9 @@ func setup(new_direction: Vector2, new_damage: float, new_speed: float, size_sca
 	burn_damage_per_second = new_burn_damage_per_second
 	chill_duration = new_chill_duration
 	freeze_buildup_multiplier = new_freeze_buildup_multiplier
+	chain_count = maxi(new_chain_count, 0)
+	chain_radius = maxf(new_chain_radius, 0.0)
+	chain_damage_multiplier = maxf(new_chain_damage_multiplier, 0.0)
 	rotation = direction.angle()
 	$Visual.configure(skill_id)
 
@@ -89,7 +96,10 @@ func _damage_collider(collider: Object, contact_position: Vector2 = Vector2.INF)
 	_record_target_hit(target_id)
 	var damage_dealt := health.take_damage(damage)
 	GameEvents.damage_dealt.emit(damage_dealt, String(skill_id))
-	_spawn_hit_feedback(collider as Node2D, contact_position, damage_dealt)
+	var hit_node := collider as Node2D
+	_spawn_hit_feedback(hit_node, contact_position, damage_dealt)
+	if chain_count > 0 and hit_node and _element_for_skill() == &"shocked":
+		_chain_lightning_from(hit_node)
 	if remaining_pierces > 0:
 		remaining_pierces -= 1
 		var hit_enemy := collider as Node2D
@@ -103,6 +113,50 @@ func _damage_collider(collider: Object, contact_position: Vector2 = Vector2.INF)
 	_explode(collider)
 	queue_free()
 	return true
+
+func _chain_lightning_from(first_target: Node2D) -> void:
+	if chain_count <= 0 or chain_radius <= 0.0:
+		return
+	var current_target := first_target as Enemy
+	if not is_instance_valid(current_target):
+		return
+	var visited: Dictionary[int, bool] = {current_target.get_instance_id(): true}
+	var jump_damage := damage * chain_damage_multiplier
+	for _jump_index in range(chain_count):
+		var current_position := current_target.global_position
+		var next_target := _find_chain_target(current_position, visited)
+		if not is_instance_valid(next_target):
+			break
+		var next_position := next_target.global_position
+		_spawn_lightning_arc(current_position, next_position)
+		var damage_dealt := next_target.health.take_damage(jump_damage)
+		GameEvents.damage_dealt.emit(damage_dealt, String(skill_id))
+		var jump_direction := current_position.direction_to(next_position)
+		_spawn_hit_feedback(next_target, next_position, damage_dealt, jump_direction)
+		visited[next_target.get_instance_id()] = true
+		current_target = next_target
+		jump_damage *= chain_damage_multiplier
+
+
+func _find_chain_target(origin: Vector2, visited: Dictionary[int, bool]) -> Enemy:
+	var nearest: Enemy
+	var nearest_distance_squared := INF
+	for candidate in EnemyRegistry.get_in_radius(origin, chain_radius):
+		var candidate_id := candidate.get_instance_id()
+		if visited.has(candidate_id):
+			continue
+		var distance_squared := origin.distance_squared_to(candidate.global_position)
+		if distance_squared < nearest_distance_squared:
+			nearest = candidate
+			nearest_distance_squared = distance_squared
+	return nearest
+
+
+func _spawn_lightning_arc(start: Vector2, finish: Vector2) -> void:
+	var arc := LIGHTNING_ARC_FX.new() as LightningArcFX
+	get_tree().current_scene.add_child(arc)
+	arc.configure(start, finish)
+
 
 func _get_homing_target() -> Node2D:
 	if not homing_target_ref:
@@ -188,6 +242,6 @@ func _element_for_skill() -> StringName:
 			return &"burning"
 		&"ice", &"frost", &"blizzard", &"ice_shard":
 			return &"chilled"
-		&"lightning", &"storm", &"shock":
+		&"lightning", &"storm", &"shock", &"chain_lightning":
 			return &"shocked"
 	return &""
