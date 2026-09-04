@@ -17,6 +17,8 @@ const POST_FREEZE_BUILDUP_MULTIPLIER := 0.35
 const POST_FREEZE_RESISTANCE_DURATION := 3.0
 const NORMAL_FREEZE_DURATION := 1.15
 const BOSS_FREEZE_DURATION := 0.6
+const SHOCK_MAX_STACKS := 5
+const SHOCK_DAMAGE_TAKEN_PER_STACK := 0.08
 const PLAYER_PUSH_SPEED_MULTIPLIER := 2.5
 const PLAYER_PUSH_RESPONSE := 2400.0
 const PROJECTILE_KNOCKBACK_MIN_SPEED := 35.0
@@ -278,7 +280,8 @@ func apply_elemental_affliction(element: StringName, duration: float, damage_per
 	if dying or duration <= 0.0 or element.is_empty():
 		return
 	var entry: Dictionary = afflictions.get(element, {})
-	entry["stacks"] = int(entry.get("stacks", 0)) + 1
+	var next_stacks := int(entry.get("stacks", 0)) + 1
+	entry["stacks"] = mini(next_stacks, SHOCK_MAX_STACKS) if element == &"shocked" else next_stacks
 	entry["remaining"] = maxf(float(entry.get("remaining", 0.0)), duration)
 	if damage_per_second > 0.0:
 		entry["damage_per_second"] = maxf(float(entry.get("damage_per_second", 0.0)), damage_per_second)
@@ -365,6 +368,9 @@ func _process_afflictions(delta: float) -> void:
 func _sync_affliction_visuals() -> void:
 	var burning: Dictionary = afflictions.get(&"burning", {})
 	gpu_burn_intensity = clampf(float(burning.get("stacks", 0)) / float(BURNING_STACK_THRESHOLD), 0.0, 1.0)
+	var shocked: Dictionary = afflictions.get(&"shocked", {})
+	var shock_stacks := clampi(int(shocked.get("stacks", 0)), 0, SHOCK_MAX_STACKS)
+	health.set_incoming_damage_multiplier(1.0 + float(shock_stacks) * SHOCK_DAMAGE_TAKEN_PER_STACK)
 	# The regular body is rendered by a shared MultiMesh at z-index 1. Keep the
 	# full affliction presentation as a separate overlay so the selected effect
 	# style remains visible above both GPU enemies and the procedural boss.
@@ -389,6 +395,10 @@ func _update_affliction_label() -> void:
 	var chilled: Dictionary = afflictions.get(&"chilled", {})
 	if not chilled.is_empty():
 		affliction_icon.configure(&"chilled", roundi(float(chilled.get("magnitude", 0.0)) * 100.0))
+		return
+	var shocked: Dictionary = afflictions.get(&"shocked", {})
+	if not shocked.is_empty():
+		affliction_icon.configure(&"shocked", int(shocked.get("stacks", 0)))
 		return
 	var burning: Dictionary = afflictions.get(&"burning", {})
 	if burning.is_empty():
