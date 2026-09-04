@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/items/gem_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"chain_lightning"
+display_name = "Chain Lightning"
+item_type = 5
+default_rarity = 1
+accent_color = Color(0.62, 0.32, 1, 1)
+tier_label = "SKILL GEM"
+flavor_text = "Launches a charged bolt that leaps through nearby enemies, leaving them shocked and vulnerable."
+gem_kind = 0
+affinities = Array[StringName]([&"Spell", &"Lightning", &"Duration", &"Projectile"])
+skill_id = &"chain_lightning"
+effects = Dictionary[StringName, float]({&"affliction_duration": 4.0, &"chain_count": 4.0, &"chain_damage_multiplier": 0.82, &"chain_radius": 220.0, &"damage_max": 5.0, &"damage_min": 2.0, &"damage_multiplier": 1.0, &"duration_multiplier": 1.0, &"homing_strength": 4.2, &"pierce": 0.0, &"projectile_count": 1.0, &"projectile_scale": 0.9, &"projectile_speed_multiplier": 1.35, &"spread_degrees": 0.0})
