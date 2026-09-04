@@ -19,6 +19,8 @@ func configure(new_status_id: StringName, new_stacks: int, new_texture: Texture2
 		stack_label.text = "ICE"
 	elif status_id == &"chilled":
 		stack_label.text = "%d%%" % stacks
+	elif status_id == &"shocked":
+		stack_label.text = "x%d" % stacks
 	else:
 		stack_label.text = str(stacks)
 	visible = active
@@ -36,8 +38,9 @@ func _draw() -> void:
 		return
 	var pulse := 1.0 + sin(Time.get_ticks_msec() * 0.008) * 0.06
 	var is_cold := status_id == &"chilled" or status_id == &"frozen"
-	var border_color := Color(0.28, 0.82, 1.0, 0.82 * pulse) if is_cold else Color(1.0, 0.18, 0.02, 0.72 * pulse)
-	var inner_color := Color(0.015, 0.12, 0.2, 0.98) if is_cold else Color(0.075, 0.018, 0.01, 0.98)
+	var is_shock := status_id == &"shocked"
+	var border_color := Color(0.28, 0.82, 1.0, 0.82 * pulse) if is_cold else (Color(0.72, 0.42, 1.0, 0.88 * pulse) if is_shock else Color(1.0, 0.18, 0.02, 0.72 * pulse))
+	var inner_color := Color(0.015, 0.12, 0.2, 0.98) if is_cold else (Color(0.08, 0.025, 0.15, 0.98) if is_shock else Color(0.075, 0.018, 0.01, 0.98))
 	# Reusable square status-icon frame; the child Sprite2D supplies the graphic.
 	draw_rect(Rect2(-18, -18, 36, 36), Color(0.005, 0.008, 0.015, 0.92))
 	draw_rect(Rect2(-17, -17, 34, 34), Color(0.17, 0.19, 0.22, 1.0), false, 2.0)
@@ -48,6 +51,9 @@ func _draw() -> void:
 			var direction := Vector2.from_angle(TAU * float(spoke_index) / 6.0)
 			draw_line(Vector2.ZERO, direction * 10.0, Color(0.75, 0.96, 1.0, 0.9), 1.5, true)
 		draw_circle(Vector2.ZERO, 2.5, Color(0.92, 1.0, 1.0, 0.95))
+	elif is_shock:
+		var bolt := PackedVector2Array([Vector2(-5, -11), Vector2(2, -3), Vector2(-2, -3), Vector2(6, 10), Vector2(4, 1), Vector2(8, 1)])
+		draw_polyline(bolt, Color(0.95, 0.88, 1.0, 0.96), 2.2, true)
 	else:
 		draw_line(Vector2(-14, -13), Vector2(13, -13), Color(1.0, 0.58, 0.12, 0.72), 1.0, true)
 		draw_line(Vector2(-13, 13), Vector2(13, 13), Color(0.35, 0.025, 0.01, 0.9), 1.0, true)
