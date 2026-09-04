@@ -129,6 +129,7 @@ func _chain_lightning_from(first_target: Node2D) -> void:
 			break
 		var next_position := next_target.global_position
 		_spawn_lightning_arc(current_position, next_position)
+		_record_target_hit(next_target.get_instance_id())
 		var damage_dealt := next_target.health.take_damage(jump_damage)
 		GameEvents.damage_dealt.emit(damage_dealt, String(skill_id))
 		var jump_direction := current_position.direction_to(next_position)
@@ -143,7 +144,7 @@ func _find_chain_target(origin: Vector2, visited: Dictionary[int, bool]) -> Enem
 	var nearest_distance_squared := INF
 	for candidate in EnemyRegistry.get_in_radius(origin, chain_radius):
 		var candidate_id := candidate.get_instance_id()
-		if visited.has(candidate_id):
+		if visited.has(candidate_id) or not _can_damage_target(candidate_id):
 			continue
 		var distance_squared := origin.distance_squared_to(candidate.global_position)
 		if distance_squared < nearest_distance_squared:
