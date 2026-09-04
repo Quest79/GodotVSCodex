@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="Script" path="res://scenes/main/game.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/actors/player/player.tscn" id="2"]
@@ -16,6 +16,7 @@
 [ext_resource type="Resource" path="res://resources/gems/heatseeking_projectiles.tres" id="14"]
 [ext_resource type="Resource" path="res://resources/gems/impact_nova.tres" id="15"]
 [ext_resource type="Resource" path="res://resources/gems/ice_shard.tres" id="18"]
+[ext_resource type="Resource" path="res://resources/gems/chain_lightning.tres" id="19"]
 [ext_resource type="Script" path="res://scenes/main/meadow_background.gd" id="16"]
 [ext_resource type="Script" path="res://scenes/actors/enemy/enemy_render_manager.gd" id="17"]
 
@@ -34,7 +35,7 @@ script = ExtResource("17")
 
 [node name="ItemInventory" type="Node" parent="."]
 script = ExtResource("5")
-starter_items = Array[Resource]([ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("18"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15")])
+starter_items = Array[Resource]([ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("18"), ExtResource("19"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15")])
 
 [node name="GameUI" parent="." instance=ExtResource("4")]
 
