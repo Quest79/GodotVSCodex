@@ -39,6 +39,20 @@ const CROWD_SEPARATION_REFRESH_INTERVAL := 0.1
 const GPU_HIT_FLASH_DURATION := 0.12
 const HEALTH_LABEL_VISIBLE_DURATION := 1.25
 
+# Rendering every bit of feedback for a 100-enemy AOE burst is far more
+# expensive than the damage calculation itself. These budgets affect visuals
+# only; health, afflictions, knockback, XP, loot, and kill events stay exact.
+const DAMAGE_NUMBER_FRAME_BUDGET := 18
+const HEALTH_LABEL_FRAME_BUDGET := 24
+const DEATH_FX_FRAME_BUDGET := 10
+const BURN_EXPLOSION_FX_FRAME_BUDGET := 4
+
+static var feedback_budget_frame := -1
+static var damage_numbers_this_frame := 0
+static var health_labels_this_frame := 0
+static var death_fx_this_frame := 0
+static var burn_explosion_fx_this_frame := 0
+
 @export var base_stats: ActorStats
 @export var xp_gem_scene: PackedScene
 @export var damage_number_scene: PackedScene
@@ -115,15 +129,19 @@ func _exit_tree() -> void:
 func _on_health_changed(current: float, _maximum: float) -> void:
 	if is_boss:
 		boss_health_bar.set_health(current, health.maximum)
-	else:
+	elif health_label.visible:
+		# Hidden labels do not need text/layout work on every mass-AOE hit.
 		health_label.text = "%d HP" % ceili(current)
 
 func _on_damaged(amount: float) -> void:
 	gpu_hit_flash = 1.0
 	if not is_boss:
-		health_label_visible_elapsed = HEALTH_LABEL_VISIBLE_DURATION
-		health_label.show()
+		if health_label.visible or _consume_feedback_budget(&"health_label"):
+			health_label_visible_elapsed = HEALTH_LABEL_VISIBLE_DURATION
+			health_label.show()
 	if not damage_number_scene:
+		return
+	if not is_boss and not _consume_feedback_budget(&"damage_number"):
 		return
 	var number := damage_number_scene.instantiate() as Node2D
 	number.call("setup", amount, global_position + Vector2(0.0, -24.0))
@@ -380,10 +398,11 @@ func _sync_affliction_visuals() -> void:
 func _trigger_burning_stack_explosion(damage: float) -> void:
 	if dying or damage <= 0.0:
 		return
-	var effect := FIRE_EXPLOSION_FX.new() as FireExplosionFX
-	get_tree().current_scene.add_child(effect)
-	effect.global_position = global_position
-	effect.configure(BURNING_EXPLOSION_RADIUS)
+	if _consume_feedback_budget(&"burn_explosion"):
+		var effect := FIRE_EXPLOSION_FX.new() as FireExplosionFX
+		get_tree().current_scene.add_child(effect)
+		effect.global_position = global_position
+		effect.configure(BURNING_EXPLOSION_RADIUS)
 	for enemy in EnemyRegistry.get_in_radius(global_position, BURNING_EXPLOSION_RADIUS):
 		GameEvents.damage_dealt.emit(damage, "burning_stack")
 		enemy.health.take_damage(damage)
@@ -519,11 +538,43 @@ func _on_died() -> void:
 		boss_effect.global_position = global_position
 		boss_effect.configure(19.0 * visual_scale * 3.0)
 	else:
-		var effect := DEATH_FX.new() as EnemyDeathFX
-		get_tree().current_scene.add_child(effect)
-		effect.global_position = global_position
-		effect.configure(GameEvents.enemy_death_effect, 19.0 * visual_scale)
+		if _consume_feedback_budget(&"death_fx"):
+			var effect := DEATH_FX.new() as EnemyDeathFX
+			get_tree().current_scene.add_child(effect)
+			effect.global_position = global_position
+			effect.configure(GameEvents.enemy_death_effect, 19.0 * visual_scale)
 	queue_free()
+
+
+static func _consume_feedback_budget(kind: StringName) -> bool:
+	var frame := Engine.get_physics_frames()
+	if frame != feedback_budget_frame:
+		feedback_budget_frame = frame
+		damage_numbers_this_frame = 0
+		health_labels_this_frame = 0
+		death_fx_this_frame = 0
+		burn_explosion_fx_this_frame = 0
+	match kind:
+		&"damage_number":
+			if damage_numbers_this_frame >= DAMAGE_NUMBER_FRAME_BUDGET:
+				return false
+			damage_numbers_this_frame += 1
+		&"health_label":
+			if health_labels_this_frame >= HEALTH_LABEL_FRAME_BUDGET:
+				return false
+			health_labels_this_frame += 1
+		&"death_fx":
+			if death_fx_this_frame >= DEATH_FX_FRAME_BUDGET:
+				return false
+			death_fx_this_frame += 1
+		&"burn_explosion":
+			if burn_explosion_fx_this_frame >= BURN_EXPLOSION_FX_FRAME_BUDGET:
+				return false
+			burn_explosion_fx_this_frame += 1
+		_:
+			return false
+	return true
+
 
 func _try_drop_loot() -> void:
 	if not loot_drop_scene or loot_definitions.is_empty():
