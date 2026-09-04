@@ -1,0 +1,48 @@
+name: Godot Smoke Test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Godot 4.7.2
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 3 -o godot.zip "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip"
+          echo "cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4  godot.zip" | sha256sum -c -
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.2-stable_linux.x86_64
+          ./Godot_v4.7.2-stable_linux.x86_64 --version
+
+      - name: Import and parse project
+        run: |
+          set -o pipefail
+          ./Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit-after 2 2>&1 | tee import.log
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then exit "$code"; fi
+          if grep -E "SCRIPT ERROR|Parse Error" import.log; then exit 1; fi
+
+      - name: Smoke-run main scene
+        run: |
+          set -o pipefail
+          ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --quit-after 180 2>&1 | tee smoke.log
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then exit "$code"; fi
+          if grep -E "SCRIPT ERROR|Parse Error" smoke.log; then exit 1; fi
+
+      - name: Run regression scenes
+        run: |
+          set -euxo pipefail
+          for scene in tests/test_*.tscn; do
+            echo "RUNNING $scene"
+            ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . "$scene"
+          done
