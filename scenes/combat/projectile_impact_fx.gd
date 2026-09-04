@@ -59,7 +59,7 @@ func _palette() -> Array[Color]:
 		return [Color("#ff3b12"), Color("#ff9d24"), Color("#fff2a6")]
 	if element == &"ice" or element == &"frost" or element == &"ice_shard":
 		return [Color("#3da9ff"), Color("#a8e8ff"), Color("#f2ffff")]
-	if element == &"lightning" or element == &"storm":
+	if element == &"lightning" or element == &"storm" or element == &"chain_lightning":
 		return [Color("#9e6cff"), Color("#e3c8ff"), Color("#ffffff")]
 	return [Color("#7136c7"), Color("#bd86ff"), Color("#e8d7ff")]
 
