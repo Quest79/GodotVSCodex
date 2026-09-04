@@ -7,6 +7,7 @@ signal died
 
 var maximum := 1.0
 var current := 1.0
+var incoming_damage_multiplier := 1.0
 
 func configure(max_health: float) -> void:
 	maximum = maxf(max_health, 1.0)
@@ -16,13 +17,18 @@ func configure(max_health: float) -> void:
 func take_damage(amount: float) -> float:
 	if amount <= 0.0 or current <= 0.0:
 		return 0.0
-	var damage_dealt := minf(amount, current)
+	var adjusted_amount := amount * incoming_damage_multiplier
+	var damage_dealt := minf(adjusted_amount, current)
 	current -= damage_dealt
 	damaged.emit(damage_dealt)
 	health_changed.emit(current, maximum)
 	if current <= 0.0:
 		died.emit()
 	return damage_dealt
+
+func set_incoming_damage_multiplier(multiplier: float) -> void:
+	incoming_damage_multiplier = maxf(multiplier, 0.0)
+
 
 func increase_max_health(amount: float, heal_amount: float = 0.0) -> void:
 	maximum = maxf(maximum + amount, 1.0)
