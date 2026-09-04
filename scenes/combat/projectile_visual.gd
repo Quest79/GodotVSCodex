@@ -15,7 +15,7 @@ func configure(new_skill_id: StringName) -> void:
 	skill_id = new_skill_id
 	trail_particles.clear()
 	emission_accumulator = 0.0
-	set_process(skill_id == &"fireball" or skill_id == &"ice_shard")
+	set_process(skill_id == &"fireball" or skill_id == &"ice_shard" or skill_id == &"chain_lightning")
 	_sync_world_transform()
 	queue_redraw()
 
@@ -38,8 +38,31 @@ func _draw() -> void:
 		_draw_fireball()
 	elif skill_id == &"ice_shard":
 		_draw_ice_shard()
+	elif skill_id == &"chain_lightning":
+		_draw_chain_lightning()
 	else:
 		_draw_default_projectile()
+
+func _draw_chain_lightning() -> void:
+	var projectile := get_parent()
+	var direction_angle := 0.0
+	if projectile and "direction" in projectile:
+		direction_angle = Vector2(projectile.direction).angle()
+	draw_set_transform(Vector2.ZERO, direction_angle, Vector2.ONE)
+	var points := PackedVector2Array()
+	for index in 8:
+		var x := lerpf(-15.0, 16.0, float(index) / 7.0)
+		var y := 0.0
+		if index > 0 and index < 7:
+			y = sin(elapsed * 54.0 + float(index) * 2.71) * (3.0 + float(index % 2) * 1.4)
+		points.append(Vector2(x, y))
+	draw_polyline(points, Color(0.42, 0.16, 1.0, 0.45), 6.0, true)
+	draw_polyline(points, Color(0.74, 0.48, 1.0, 0.98), 3.0, true)
+	draw_polyline(points, Color(0.97, 0.94, 1.0, 1.0), 1.1, true)
+	draw_circle(Vector2(16.0, 0.0), 5.0 + sin(elapsed * 28.0), Color(0.73, 0.46, 1.0, 0.35))
+	draw_circle(Vector2(16.0, 0.0), 2.4, Color(1.0, 0.98, 1.0, 1.0))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
 
 func _draw_ice_shard() -> void:
 	var projectile := get_parent()
