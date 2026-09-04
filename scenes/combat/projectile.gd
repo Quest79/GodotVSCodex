@@ -7,6 +7,17 @@ const LIGHTNING_ARC_FX := preload("res://scenes/combat/lightning_arc_fx.gd")
 const HIT_TARGET_REACQUIRE_DELAY := 0.02
 const HIT_TARGET_DAMAGE_COOLDOWN := 0.5
 
+# Mass-AOE hits used to instantiate one animated impact node per target.
+# Keep gameplay exact, but cap cosmetic node creation during burst frames.
+const IMPACT_FX_FRAME_BUDGET := 16
+const LIGHTNING_ARC_FRAME_BUDGET := 12
+const EXPLOSION_FX_FRAME_BUDGET := 6
+
+static var fx_budget_frame := -1
+static var impact_fx_this_frame := 0
+static var lightning_arcs_this_frame := 0
+static var explosion_fx_this_frame := 0
+
 var direction := Vector2.RIGHT
 var speed := 720.0
 var damage := 10.0
@@ -154,6 +165,8 @@ func _find_chain_target(origin: Vector2, visited: Dictionary[int, bool]) -> Enem
 
 
 func _spawn_lightning_arc(start: Vector2, finish: Vector2) -> void:
+	if not _consume_fx_budget(&"lightning_arc"):
+		return
 	var arc := LIGHTNING_ARC_FX.new() as LightningArcFX
 	get_tree().current_scene.add_child(arc)
 	arc.configure(start, finish)
@@ -196,10 +209,11 @@ func _explode(primary_target: Object) -> void:
 	if exploded or explosion_radius <= 0.0:
 		return
 	exploded = true
-	var effect := FIRE_EXPLOSION_FX.new() as FireExplosionFX
-	get_tree().current_scene.add_child(effect)
-	effect.global_position = global_position
-	effect.configure(explosion_radius)
+	if _consume_fx_budget(&"explosion"):
+		var effect := FIRE_EXPLOSION_FX.new() as FireExplosionFX
+		get_tree().current_scene.add_child(effect)
+		effect.global_position = global_position
+		effect.configure(explosion_radius)
 	for enemy in EnemyRegistry.get_in_radius(global_position, explosion_radius, primary_target as Enemy):
 		var target_id := enemy.get_instance_id()
 		if not _can_damage_target(target_id):
@@ -224,10 +238,37 @@ func _spawn_hit_feedback(target: Node2D, impact_position: Vector2 = Vector2.INF,
 		if flight_time >= next_allowed_time:
 			target.apply_elemental_affliction(element, burn_duration, burn_damage_per_second)
 			affliction_target_expiry[affliction_key] = flight_time + burn_duration
-	var effect := PROJECTILE_IMPACT_FX.new() as Node2D
-	get_tree().current_scene.add_child(effect)
-	effect.global_position = impact_position if impact_position.is_finite() else _estimate_impact_position(target, direction)
-	effect.call("configure", skill_id, impact_direction, scale.x)
+	if _consume_fx_budget(&"impact"):
+		var effect := PROJECTILE_IMPACT_FX.new() as Node2D
+		get_tree().current_scene.add_child(effect)
+		effect.global_position = impact_position if impact_position.is_finite() else _estimate_impact_position(target, direction)
+		effect.call("configure", skill_id, impact_direction, scale.x)
+
+
+static func _consume_fx_budget(kind: StringName) -> bool:
+	var frame := Engine.get_physics_frames()
+	if frame != fx_budget_frame:
+		fx_budget_frame = frame
+		impact_fx_this_frame = 0
+		lightning_arcs_this_frame = 0
+		explosion_fx_this_frame = 0
+	match kind:
+		&"impact":
+			if impact_fx_this_frame >= IMPACT_FX_FRAME_BUDGET:
+				return false
+			impact_fx_this_frame += 1
+		&"lightning_arc":
+			if lightning_arcs_this_frame >= LIGHTNING_ARC_FRAME_BUDGET:
+				return false
+			lightning_arcs_this_frame += 1
+		&"explosion":
+			if explosion_fx_this_frame >= EXPLOSION_FX_FRAME_BUDGET:
+				return false
+			explosion_fx_this_frame += 1
+		_:
+			return false
+	return true
+
 
 func _estimate_impact_position(target: Node2D, incoming_direction: Vector2) -> Vector2:
 	var radius := 18.0
