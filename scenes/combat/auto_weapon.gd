@@ -61,7 +61,10 @@ func _attack() -> void:
 			float(skill_config.get(&"affliction_duration", skill_config.get(&"burn_duration", 0.0))) * float(skill_config.get(&"duration_multiplier", 1.0)),
 			float(skill_config.get(&"burn_damage_per_second", 0.0)),
 			float(skill_config.get(&"chill_duration", 0.0)) * float(skill_config.get(&"duration_multiplier", 1.0)),
-			float(skill_config.get(&"freeze_buildup_multiplier", 0.0))
+			float(skill_config.get(&"freeze_buildup_multiplier", 0.0)),
+			roundi(float(skill_config.get(&"chain_count", 0.0))),
+			float(skill_config.get(&"chain_radius", 0.0)),
+			float(skill_config.get(&"chain_damage_multiplier", 1.0))
 		)
 
 func _find_nearest_enemies(limit: int) -> Array[Enemy]:
