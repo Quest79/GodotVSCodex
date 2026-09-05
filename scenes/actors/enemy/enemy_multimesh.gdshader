@@ -26,8 +26,8 @@ void vertex() {
 	COLOR = vec4(1.0);
 	instance_seed = INSTANCE_CUSTOM.r;
 	float phase = instance_seed * 6.28318530718;
-	# Health now occupies INSTANCE_CUSTOM.a. Keep the living animation
-	# deterministic and independent of health/transparency.
+	// Health now occupies INSTANCE_CUSTOM.a. Keep the living animation
+	// deterministic and independent of health/transparency.
 	float urgency = 0.78;
 	float animation = TIME * mix(2.3, 6.2, urgency) + phase;
 	float breathing = sin(animation * 2.0) * 0.055;

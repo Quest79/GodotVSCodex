@@ -1,5 +1,9 @@
 name: Godot Smoke Test
 
+concurrency:
+  group: godot-smoke-main
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
