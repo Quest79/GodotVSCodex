@@ -116,11 +116,12 @@ func _physics_process(delta: float) -> void:
 			enemy.gpu_hit_flash,
 			urgency
 		))
+		var health_fraction := clampf(enemy.health.current / maxf(enemy.health.maximum, 1.0), 0.0, 1.0)
 		multimesh.set_instance_color(index, Color(
 			enemy.gpu_chill_intensity,
 			enemy.gpu_shock_intensity,
 			enemy.gpu_frozen_amount,
-			1.0
+			health_fraction
 		))
 		index += 1
 
