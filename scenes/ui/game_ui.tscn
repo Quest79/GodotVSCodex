@@ -317,7 +317,7 @@ layout_mode = 1
 offset_left = 18.0
 offset_top = 188.0
 offset_right = 438.0
-offset_bottom = 440.0
+offset_bottom = 552.0
 theme_override_styles/panel = SubResource("StyleBox_stats_panel")
 
 [node name="Margin" type="MarginContainer" parent="HUD/PlayerStatsPanel"]
@@ -459,6 +459,66 @@ text = "CURRENT FRAMERATE"
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.4, 1, 0.68, 1)
+theme_override_font_sizes/font_size = 14
+text = "0"
+horizontal_alignment = 2
+
+[node name="FrameCPUTitle" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "FRAME CPU"
+
+[node name="FrameCPULabel" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "0.00 ms"
+horizontal_alignment = 2
+
+[node name="PhysicsCPUTitle" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "PHYSICS CPU"
+
+[node name="PhysicsCPULabel" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "0.00 ms"
+horizontal_alignment = 2
+
+[node name="DrawCallsTitle" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "DRAW CALLS"
+
+[node name="DrawCallsLabel" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "0"
+horizontal_alignment = 2
+
+[node name="NodeCountTitle" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "NODE COUNT"
+
+[node name="NodeCountLabel" type="Label" parent="HUD/PlayerStatsPanel/Margin/Content/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.96, 1, 1)
 theme_override_font_sizes/font_size = 14
 text = "0"
 horizontal_alignment = 2
