@@ -87,7 +87,9 @@ func unregister_enemy(enemy: Enemy) -> void:
 	if is_instance_valid(shadow_renderer) and shadow_renderer.multimesh:
 		shadow_renderer.multimesh.visible_instance_count = rendered_enemies.size()
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
+	# Enemy transforms only change on physics ticks. Updating this in _process()
+	# resent identical MultiMesh data several times per physics step at high FPS.
 	if not multimesh:
 		return
 	var index := 0

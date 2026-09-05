@@ -26,6 +26,7 @@ func _ready() -> void:
 	call_deferred("_broadcast_run_stats")
 	call_deferred("_sync_equipment")
 	call_deferred("_update_speed_status")
+	call_deferred("_update_version_status")
 
 func _reset_player_start() -> void:
 	# Initialize position and camera before the first rendered frame. Applying
@@ -60,6 +61,11 @@ func _update_speed_status() -> void:
 	else:
 		label.text = "SPACE  SPEED x%.2f" % (GameEvents.game_speed_percent / 100.0)
 		label.add_theme_color_override("font_color", Color(0.45, 0.62, 0.66))
+
+
+func _update_version_status() -> void:
+	var label := $GameUI/VersionStatus as Label
+	label.text = "v%s" % String(ProjectSettings.get_setting("application/config/version", "DEV"))
 
 func _on_enemy_defeated() -> void:
 	score += 10

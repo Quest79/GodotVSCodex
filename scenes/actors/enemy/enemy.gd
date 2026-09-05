@@ -35,7 +35,7 @@ const BOSS_WAITING_FOR_GROUP_DEATH := 3
 const BOSS_RECOVERING := 4
 const BODY_RADIUS := 28.0
 const CONTACT_DAMAGE_RADIUS := 24.0
-const CROWD_SEPARATION_REFRESH_INTERVAL := 0.1
+const CROWD_SEPARATION_REFRESH_INTERVAL := 0.2
 const GPU_HIT_FLASH_DURATION := 0.12
 const HEALTH_LABEL_VISIBLE_DURATION := 1.25
 
@@ -101,10 +101,13 @@ var crowd_separation_refresh_elapsed := 0.0
 var gpu_hit_flash := 0.0
 var gpu_burn_intensity := 0.0
 var health_label_visible_elapsed := 0.0
+var cached_body_mass := 1.0
+var cached_body_radius := BODY_RADIUS
 var render_manager: EnemyRenderManager
 
 func _ready() -> void:
 	stats = base_stats.duplicate(true)
+	_update_body_metrics()
 	health.died.connect(_on_died)
 	health.damaged.connect(_on_damaged)
 	health.health_changed.connect(_on_health_changed)
@@ -474,14 +477,17 @@ func apply_player_body_push(player_position: Vector2, player_mass: float, player
 	impact_velocity = impact_velocity.move_toward(target_push_velocity, PLAYER_PUSH_RESPONSE * delta)
 
 func get_body_mass() -> float:
-	var body_scale := maxf(absf(global_scale.x), absf(global_scale.y))
-	# Use the same softened curve as Player: size matters without turning
-	# a merely 2x-sized enemy into an immovable wall.
-	return maxf(pow(body_scale, 1.6), 0.05)
+	return cached_body_mass
 
 func get_body_radius() -> float:
+	return cached_body_radius
+
+func _update_body_metrics() -> void:
 	var body_scale := maxf(absf(global_scale.x), absf(global_scale.y))
-	return BODY_RADIUS * body_scale
+	# Scale changes only for special enemies, so do the expensive pow() once
+	# instead of once per neighbor pair during crowd separation.
+	cached_body_mass = maxf(pow(body_scale, 1.6), 0.05)
+	cached_body_radius = BODY_RADIUS * body_scale
 
 func try_contact_damage(player_position: Vector2, player_radius: float, player_health: HealthComponent, now: float) -> void:
 	if dying or is_frozen() or contact_damage_amount <= 0.0 or not is_instance_valid(player_health):
@@ -509,6 +515,7 @@ func configure_boss() -> void:
 	stats.damage = 0.0
 	contact_damage_amount = 0.0
 	scale = Vector2.ONE * 3.5
+	_update_body_metrics()
 	health_label.hide()
 	affliction_icon.scale = Vector2.ONE * (0.65 / 3.5)
 	affliction_icon.position = Vector2(-150.0, -72.0) / 3.5

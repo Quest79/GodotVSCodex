@@ -11,6 +11,7 @@ const CROWD_BODY_GAP := 5.0
 const CROWD_SEPARATION_SPEED := 155.0
 const CROWD_MAX_SEPARATION_SPEED := 190.0
 const CROWD_FLOW_SPEED := 42.0
+const MAX_CROWD_NEIGHBOR_CHECKS := 18
 
 var enemies: Dictionary[int, Enemy] = {}
 var enemy_cells: Dictionary[int, Vector2i] = {}
@@ -98,33 +99,40 @@ func get_crowd_separation(enemy: Enemy, target_position: Vector2) -> Vector2:
 	var cell_radius := ceili(query_radius / CELL_SIZE)
 	var separation := Vector2.ZERO
 	var neighbor_count := 0
+	var checked_neighbors := 0
 	var enemy_id := enemy.get_instance_id()
 	for x_offset in range(-cell_radius, cell_radius + 1):
+		if checked_neighbors >= MAX_CROWD_NEIGHBOR_CHECKS:
+			break
 		for y_offset in range(-cell_radius, cell_radius + 1):
+			if checked_neighbors >= MAX_CROWD_NEIGHBOR_CHECKS:
+				break
 			var bucket: Dictionary = spatial_buckets.get(center_cell + Vector2i(x_offset, y_offset), {})
 			for candidate_node in bucket.values():
 				var candidate := candidate_node as Enemy
 				if not _is_targetable(candidate) or candidate == enemy:
 					continue
+				checked_neighbors += 1
 				var desired_distance := enemy_radius + candidate.get_body_radius() + CROWD_BODY_GAP
 				var offset := enemy_position - candidate.global_position
 				var distance_squared := offset.length_squared()
-				if distance_squared >= desired_distance * desired_distance:
-					continue
-				var direction: Vector2
-				var distance := sqrt(distance_squared)
-				if distance > 0.001:
-					direction = offset / distance
-				else:
-					var candidate_id := candidate.get_instance_id()
-					var pair_seed := mini(enemy_id, candidate_id)
-					var pair_direction := Vector2.from_angle(fmod(float(pair_seed) * 0.000173, TAU))
-					direction = pair_direction if enemy_id < candidate_id else -pair_direction
-				var overlap := 1.0 - distance / desired_distance
-				var candidate_mass := candidate.get_body_mass()
-				var movement_share := candidate_mass / maxf(enemy_mass + candidate_mass, 0.001)
-				separation += direction * overlap * CROWD_SEPARATION_SPEED * movement_share
-				neighbor_count += 1
+				if distance_squared < desired_distance * desired_distance:
+					var direction: Vector2
+					var distance := sqrt(distance_squared)
+					if distance > 0.001:
+						direction = offset / distance
+					else:
+						var candidate_id := candidate.get_instance_id()
+						var pair_seed := mini(enemy_id, candidate_id)
+						var pair_direction := Vector2.from_angle(fmod(float(pair_seed) * 0.000173, TAU))
+						direction = pair_direction if enemy_id < candidate_id else -pair_direction
+					var overlap := 1.0 - distance / desired_distance
+					var candidate_mass := candidate.get_body_mass()
+					var movement_share := candidate_mass / maxf(enemy_mass + candidate_mass, 0.001)
+					separation += direction * overlap * CROWD_SEPARATION_SPEED * movement_share
+					neighbor_count += 1
+				if checked_neighbors >= MAX_CROWD_NEIGHBOR_CHECKS:
+					break
 	if neighbor_count == 0:
 		return Vector2.ZERO
 	# When a dense wave converges on one target, pure radial repulsion can cancel
