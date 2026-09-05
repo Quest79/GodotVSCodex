@@ -109,19 +109,20 @@ func _physics_process(delta: float) -> void:
 		# anchored to the ground while the enemy body turns and lunges above them.
 		var shadow_transform := Transform2D(0.0, enemy.global_position + SHADOW_OFFSET)
 		shadow_renderer.multimesh.set_instance_transform_2d(index, shadow_transform)
-		var urgency := clampf(enemy.velocity.length() / 95.0, 0.25, 1.0)
+		var health_fraction := clampf(enemy.health.current / maxf(enemy.health.maximum, 1.0), 0.0, 1.0)
 		multimesh.set_instance_custom_data(index, Color(
 			animation_phases[index],
 			enemy.gpu_burn_intensity,
 			enemy.gpu_hit_flash,
-			urgency
+			health_fraction
 		))
-		var health_fraction := clampf(enemy.health.current / maxf(enemy.health.maximum, 1.0), 0.0, 1.0)
+		# Never use instance alpha as arbitrary data: CanvasItem/MultiMesh may
+		# apply it as real transparency before/around the shader.
 		multimesh.set_instance_color(index, Color(
 			enemy.gpu_chill_intensity,
 			enemy.gpu_shock_intensity,
 			enemy.gpu_frozen_amount,
-			health_fraction
+			1.0
 		))
 		index += 1
 
