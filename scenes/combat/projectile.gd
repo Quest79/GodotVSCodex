@@ -1,11 +1,13 @@
 class_name Projectile
-extends Area2D
+extends Node2D
 
 const FIRE_EXPLOSION_FX := preload("res://scenes/combat/fire_explosion_fx.gd")
 const PROJECTILE_IMPACT_FX := preload("res://scenes/combat/projectile_impact_fx.gd")
 const LIGHTNING_ARC_FX := preload("res://scenes/combat/lightning_arc_fx.gd")
 const HIT_TARGET_REACQUIRE_DELAY := 0.02
 const HIT_TARGET_DAMAGE_COOLDOWN := 0.5
+const PROJECTILE_RADIUS := 7.0
+const COLLISION_QUERY_PADDING := 128.0
 
 # Mass-AOE hits used to instantiate one animated impact node per target.
 # Keep gameplay exact, but cap cosmetic node creation during burst frames.
@@ -41,11 +43,6 @@ var target_last_hit_time: Dictionary[int, float] = {}
 var affliction_target_expiry: Dictionary[String, float] = {}
 var exploded := false
 
-@onready var shape_cast: ShapeCast2D = $ShapeCast2D
-
-func _ready() -> void:
-	body_entered.connect(_on_body_entered)
-
 func setup(new_direction: Vector2, new_damage: float, new_speed: float, size_scale: float, new_lifetime := 2.0, pierce_count := 0, new_explosion_radius := 0.0, new_skill_id := &"default_attack", new_homing_target: Node2D = null, new_homing_strength := 0.0, new_burn_duration := 0.0, new_burn_damage_per_second := 0.0, new_chill_duration := 0.0, new_freeze_buildup_multiplier := 0.0, new_chain_count := 0, new_chain_radius := 0.0, new_chain_damage_multiplier := 1.0) -> void:
 	direction = new_direction.normalized()
 	damage = new_damage
@@ -80,20 +77,45 @@ func _physics_process(delta: float) -> void:
 			direction = direction.lerp(desired_direction, clampf(homing_strength * delta, 0.0, 1.0)).normalized()
 			rotation = direction.angle()
 	var movement := direction * speed * delta
-	shape_cast.target_position = Vector2(movement.length(), 0.0)
-	shape_cast.force_shapecast_update()
-	if shape_cast.is_colliding():
-		for index in shape_cast.get_collision_count():
-			if _damage_collider(shape_cast.get_collider(index), shape_cast.get_collision_point(index)):
-				return
-	global_position += movement
+	var start_position := global_position
+	var end_position := start_position + movement
+	for enemy in _find_swept_hits(start_position, end_position):
+		if _damage_collider(enemy, _estimate_impact_position(enemy, direction)):
+			return
+	global_position = end_position
 	lifetime -= delta
 	if lifetime <= 0.0:
 		_explode(null)
 		queue_free()
 
-func _on_body_entered(body: Node2D) -> void:
-	_damage_collider(body, _estimate_impact_position(body, direction))
+func _find_swept_hits(start_position: Vector2, end_position: Vector2) -> Array[Enemy]:
+	var hits: Array[Enemy] = []
+	var segment := end_position - start_position
+	var midpoint := (start_position + end_position) * 0.5
+	var query_radius := segment.length() * 0.5 + COLLISION_QUERY_PADDING
+	var projectile_radius := PROJECTILE_RADIUS * maxf(absf(scale.x), absf(scale.y))
+	for enemy in EnemyRegistry.get_in_radius(midpoint, query_radius):
+		var target_id := enemy.get_instance_id()
+		if not _can_damage_target(target_id):
+			continue
+		var t := _segment_parameter(start_position, end_position, enemy.global_position)
+		var closest_point := start_position + segment * t
+		var hit_radius := enemy.get_projectile_collision_radius() + projectile_radius
+		if closest_point.distance_squared_to(enemy.global_position) <= hit_radius * hit_radius:
+			hits.append(enemy)
+	hits.sort_custom(func(first: Enemy, second: Enemy) -> bool:
+		return _segment_parameter(start_position, end_position, first.global_position) < _segment_parameter(start_position, end_position, second.global_position)
+	)
+	return hits
+
+
+func _segment_parameter(start_position: Vector2, end_position: Vector2, point: Vector2) -> float:
+	var segment := end_position - start_position
+	var length_squared := segment.length_squared()
+	if length_squared <= 0.000001:
+		return 0.0
+	return clampf((point - start_position).dot(segment) / length_squared, 0.0, 1.0)
+
 
 func _damage_collider(collider: Object, contact_position: Vector2 = Vector2.INF) -> bool:
 	if not collider is Node:
@@ -272,11 +294,9 @@ static func _consume_fx_budget(kind: StringName) -> bool:
 
 func _estimate_impact_position(target: Node2D, incoming_direction: Vector2) -> Vector2:
 	var radius := 18.0
-	var collision_shape := target.get_node_or_null("Hurtbox/CollisionShape2D") as CollisionShape2D
-	if collision_shape and collision_shape.shape is CircleShape2D:
-		radius = (collision_shape.shape as CircleShape2D).radius
-	var target_scale := maxf(absf(target.global_scale.x), absf(target.global_scale.y))
-	return target.global_position - incoming_direction.normalized() * radius * target_scale
+	if target is Enemy:
+		radius = (target as Enemy).get_projectile_collision_radius()
+	return target.global_position - incoming_direction.normalized() * radius
 
 func _element_for_skill() -> StringName:
 	match skill_id:

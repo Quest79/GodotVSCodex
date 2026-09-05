@@ -1,5 +1,5 @@
 class_name Enemy
-extends CharacterBody2D
+extends Node2D
 
 const DEATH_FX := preload("res://scenes/actors/enemy/enemy_death_fx.gd")
 const BOSS_DEATH_FX := preload("res://scenes/actors/enemy/boss_death_fx.gd")
@@ -34,6 +34,7 @@ const BOSS_RELEASING := 2
 const BOSS_WAITING_FOR_GROUP_DEATH := 3
 const BOSS_RECOVERING := 4
 const BODY_RADIUS := 28.0
+const PROJECTILE_COLLISION_RADIUS := 15.0
 const CONTACT_DAMAGE_RADIUS := 24.0
 const CROWD_SEPARATION_REFRESH_INTERVAL := 0.2
 const GPU_HIT_FLASH_DURATION := 0.12
@@ -42,14 +43,12 @@ const HEALTH_LABEL_VISIBLE_DURATION := 1.25
 # Rendering every bit of feedback for a 100-enemy AOE burst is far more
 # expensive than the damage calculation itself. These budgets affect visuals
 # only; health, afflictions, knockback, XP, loot, and kill events stay exact.
-const DAMAGE_NUMBER_FRAME_BUDGET := 18
-const HEALTH_LABEL_FRAME_BUDGET := 24
+const DAMAGE_NUMBER_FRAME_BUDGET := 6
 const DEATH_FX_FRAME_BUDGET := 10
 const BURN_EXPLOSION_FX_FRAME_BUDGET := 4
 
 static var feedback_budget_frame := -1
 static var damage_numbers_this_frame := 0
-static var health_labels_this_frame := 0
 static var death_fx_this_frame := 0
 static var burn_explosion_fx_this_frame := 0
 
@@ -68,6 +67,7 @@ static var burn_explosion_fx_this_frame := 0
 
 var stats: ActorStats
 var target: Node2D
+var velocity := Vector2.ZERO
 var dying := false
 var is_boss := false
 var impact_velocity := Vector2.ZERO
@@ -100,9 +100,12 @@ var crowd_separation_target := Vector2.ZERO
 var crowd_separation_refresh_elapsed := 0.0
 var gpu_hit_flash := 0.0
 var gpu_burn_intensity := 0.0
-var health_label_visible_elapsed := 0.0
+var gpu_chill_intensity := 0.0
+var gpu_shock_intensity := 0.0
+var gpu_frozen_amount := 0.0
 var cached_body_mass := 1.0
 var cached_body_radius := BODY_RADIUS
+var cached_projectile_collision_radius := PROJECTILE_COLLISION_RADIUS
 var render_manager: EnemyRenderManager
 
 func _ready() -> void:
@@ -132,16 +135,9 @@ func _exit_tree() -> void:
 func _on_health_changed(current: float, _maximum: float) -> void:
 	if is_boss:
 		boss_health_bar.set_health(current, health.maximum)
-	elif health_label.visible:
-		# Hidden labels do not need text/layout work on every mass-AOE hit.
-		health_label.text = "%d HP" % ceili(current)
 
 func _on_damaged(amount: float) -> void:
 	gpu_hit_flash = 1.0
-	if not is_boss:
-		if health_label.visible or _consume_feedback_budget(&"health_label"):
-			health_label_visible_elapsed = HEALTH_LABEL_VISIBLE_DURATION
-			health_label.show()
 	if not damage_number_scene:
 		return
 	if not is_boss and not _consume_feedback_budget(&"damage_number"):
@@ -171,7 +167,7 @@ func _physics_process(delta: float) -> void:
 		launch_elapsed = maxf(launch_elapsed - delta, 0.0)
 		velocity = launch_velocity + impact_velocity
 		_decay_impact_velocity(delta)
-		move_and_slide()
+		global_position += velocity * delta
 		EnemyRegistry.update_enemy(self)
 		return
 	var action_speed_multiplier := _cold_action_speed_multiplier()
@@ -182,7 +178,7 @@ func _physics_process(delta: float) -> void:
 			chase_velocity = boss_charge_direction * stats.move_speed * 5.0 * action_speed_multiplier
 	velocity = chase_velocity + crowd_separation_velocity + impact_velocity
 	_decay_impact_velocity(delta)
-	move_and_slide()
+	global_position += velocity * delta
 	if is_boss:
 		_process_boss_attack(delta)
 		_process_boss_orbit_barrage(delta)
@@ -389,14 +385,21 @@ func _process_afflictions(delta: float) -> void:
 func _sync_affliction_visuals() -> void:
 	var burning: Dictionary = afflictions.get(&"burning", {})
 	gpu_burn_intensity = clampf(float(burning.get("stacks", 0)) / float(BURNING_STACK_THRESHOLD), 0.0, 1.0)
+	var chilled: Dictionary = afflictions.get(&"chilled", {})
+	gpu_chill_intensity = clampf(float(chilled.get("magnitude", 0.0)) / CHILL_MAX_EFFECT, 0.0, 1.0)
 	var shocked: Dictionary = afflictions.get(&"shocked", {})
 	var shock_stacks := clampi(int(shocked.get("stacks", 0)), 0, SHOCK_MAX_STACKS)
+	gpu_shock_intensity = float(shock_stacks) / float(SHOCK_MAX_STACKS)
+	gpu_frozen_amount = 1.0 if afflictions.has(&"frozen") else 0.0
 	health.set_incoming_damage_multiplier(1.0 + float(shock_stacks) * SHOCK_DAMAGE_TAKEN_PER_STACK)
-	# The regular body is rendered by a shared MultiMesh at z-index 1. Keep the
-	# full affliction presentation as a separate overlay so the selected effect
-	# style remains visible above both GPU enemies and the procedural boss.
-	affliction_fx.configure(afflictions)
-	_update_affliction_label()
+	if is_boss:
+		affliction_fx.configure(afflictions)
+		_update_affliction_label()
+	else:
+		if affliction_fx.active:
+			affliction_fx.clear()
+		if affliction_icon.active:
+			affliction_icon.clear()
 
 func _trigger_burning_stack_explosion(damage: float) -> void:
 	if dying or damage <= 0.0:
@@ -447,10 +450,6 @@ func _decay_impact_velocity(delta: float) -> void:
 func _update_gpu_visual_state(delta: float) -> void:
 	if gpu_hit_flash > 0.0:
 		gpu_hit_flash = maxf(0.0, gpu_hit_flash - delta / GPU_HIT_FLASH_DURATION)
-	if health_label_visible_elapsed > 0.0:
-		health_label_visible_elapsed = maxf(0.0, health_label_visible_elapsed - delta)
-		if health_label_visible_elapsed <= 0.0 and not is_boss:
-			health_label.hide()
 
 func _update_crowd_separation(delta: float) -> void:
 	if dying or orbit_boss_ref != null:
@@ -482,12 +481,16 @@ func get_body_mass() -> float:
 func get_body_radius() -> float:
 	return cached_body_radius
 
+func get_projectile_collision_radius() -> float:
+	return cached_projectile_collision_radius
+
 func _update_body_metrics() -> void:
 	var body_scale := maxf(absf(global_scale.x), absf(global_scale.y))
 	# Scale changes only for special enemies, so do the expensive pow() once
 	# instead of once per neighbor pair during crowd separation.
 	cached_body_mass = maxf(pow(body_scale, 1.6), 0.05)
 	cached_body_radius = BODY_RADIUS * body_scale
+	cached_projectile_collision_radius = PROJECTILE_COLLISION_RADIUS * body_scale
 
 func try_contact_damage(player_position: Vector2, player_radius: float, player_health: HealthComponent, now: float) -> void:
 	if dying or is_frozen() or contact_damage_amount <= 0.0 or not is_instance_valid(player_health):
@@ -558,7 +561,6 @@ static func _consume_feedback_budget(kind: StringName) -> bool:
 	if frame != feedback_budget_frame:
 		feedback_budget_frame = frame
 		damage_numbers_this_frame = 0
-		health_labels_this_frame = 0
 		death_fx_this_frame = 0
 		burn_explosion_fx_this_frame = 0
 	match kind:
@@ -566,10 +568,6 @@ static func _consume_feedback_budget(kind: StringName) -> bool:
 			if damage_numbers_this_frame >= DAMAGE_NUMBER_FRAME_BUDGET:
 				return false
 			damage_numbers_this_frame += 1
-		&"health_label":
-			if health_labels_this_frame >= HEALTH_LABEL_FRAME_BUDGET:
-				return false
-			health_labels_this_frame += 1
 		&"death_fx":
 			if death_fx_this_frame >= DEATH_FX_FRAME_BUDGET:
 				return false

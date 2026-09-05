@@ -54,7 +54,7 @@ func _physics_process(delta: float) -> void:
 	# Keep body pushes responsive even when collision has stopped visible motion.
 	var push_speed := maxf(velocity.length(), desired_velocity.length() * 0.72) if input != Vector2.ZERO else 0.0
 	move_and_slide()
-	_push_collided_enemies(push_speed, delta)
+	_push_nearby_enemies(push_speed, delta)
 	if stats.health_regen > 0.0:
 		health.heal(stats.health_regen * delta)
 
@@ -93,14 +93,16 @@ func _update_dash_cooldowns(delta: float) -> void:
 	if changed:
 		GameEvents.dash_cooldowns_changed.emit(dash_cooldowns.duplicate())
 
-func _push_collided_enemies(push_speed: float, delta: float) -> void:
+func _push_nearby_enemies(push_speed: float, delta: float) -> void:
 	if push_speed <= 1.0:
 		return
-	for collision_index in get_slide_collision_count():
-		var collision := get_slide_collision(collision_index)
-		var enemy := collision.get_collider() as Enemy
-		if enemy:
-			enemy.apply_player_body_push(global_position, get_body_mass(), push_speed, delta)
+	EnemyRegistry.push_enemies_from_player(
+		global_position,
+		get_body_radius(),
+		get_body_mass(),
+		push_speed,
+		delta
+	)
 
 func get_body_mass() -> float:
 	var body_scale := maxf(absf(global_scale.x), absf(global_scale.y))

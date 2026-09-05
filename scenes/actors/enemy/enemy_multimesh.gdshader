@@ -3,12 +3,16 @@ render_mode unshaded;
 
 varying float animation_wave;
 varying float hit_amount;
+varying float burn_amount;
+varying vec3 ailment_state;
 
 float circle_mask(vec2 point, vec2 center, float radius, float softness) {
 	return 1.0 - smoothstep(radius - softness, radius + softness, length(point - center));
 }
 
 void vertex() {
+	ailment_state = COLOR.rgb;
+	COLOR = vec4(1.0);
 	float phase = INSTANCE_CUSTOM.r * 6.28318530718;
 	float urgency = mix(0.25, 1.0, INSTANCE_CUSTOM.a);
 	float animation = TIME * mix(2.3, 6.2, urgency) + phase;
@@ -20,6 +24,7 @@ void vertex() {
 	VERTEX *= pop;
 	animation_wave = animation;
 	hit_amount = INSTANCE_CUSTOM.b;
+	burn_amount = INSTANCE_CUSTOM.g;
 }
 
 void fragment() {
@@ -54,6 +59,15 @@ void fragment() {
 		color = mix(color, vec3(1.0, 0.89, 0.65), iris);
 		color = mix(color, vec3(1.0, 0.08, 0.18), pupil);
 	}
+	float chill = clamp(ailment_state.r, 0.0, 1.0);
+	float shock = clamp(ailment_state.g, 0.0, 1.0);
+	float frozen = clamp(ailment_state.b, 0.0, 1.0);
+	float burn = clamp(burn_amount, 0.0, 1.0);
+	color = mix(color, vec3(1.0, 0.22, 0.035), burn * 0.48);
+	color = mix(color, vec3(0.2, 0.72, 1.0), chill * 0.42);
+	float shock_pulse = 0.62 + 0.38 * sin(TIME * 14.0 + animation_wave);
+	color += vec3(0.34, 0.12, 0.58) * shock * shock_pulse;
+	color = mix(color, vec3(0.72, 0.94, 1.0), frozen * 0.72);
 	color = mix(color, vec3(1.0, 0.94, 0.88), clamp(hit_amount * 1.35, 0.0, 1.0));
 	// `tex` is already the sampled sprite color. Multiplying by fragment COLOR
 	// here sampled/tinted the sprite a second time in the CanvasItem pipeline,

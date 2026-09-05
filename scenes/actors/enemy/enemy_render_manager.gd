@@ -60,7 +60,7 @@ func register_enemy(enemy: Enemy) -> void:
 	enemy_indices[enemy.get_instance_id()] = index
 	animation_phases.append(fmod(float(enemy.get_instance_id()) * 0.000173, 1.0))
 	facing_angles.append(0.0)
-	multimesh.set_instance_color(index, Color.WHITE)
+	multimesh.set_instance_color(index, Color(0.0, 0.0, 0.0, 1.0))
 	multimesh.visible_instance_count = rendered_enemies.size()
 	shadow_renderer.multimesh.visible_instance_count = rendered_enemies.size()
 
@@ -115,6 +115,12 @@ func _physics_process(delta: float) -> void:
 			enemy.gpu_burn_intensity,
 			enemy.gpu_hit_flash,
 			urgency
+		))
+		multimesh.set_instance_color(index, Color(
+			enemy.gpu_chill_intensity,
+			enemy.gpu_shock_intensity,
+			enemy.gpu_frozen_amount,
+			1.0
 		))
 		index += 1
 

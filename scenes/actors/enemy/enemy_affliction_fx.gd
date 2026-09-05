@@ -19,12 +19,17 @@ var redraw_elapsed := 0.0
 var burning_budget_registered := false
 var cold_budget_registered := false
 
+func _ready() -> void:
+	visible = false
+	set_process(false)
+
 func configure(new_afflictions: Dictionary) -> void:
 	afflictions = new_afflictions.duplicate(true)
 	_set_burning_budget_registration(afflictions.has(BURNING))
 	_set_cold_budget_registration(afflictions.has(CHILLED) or afflictions.has(FROZEN))
 	active = not afflictions.is_empty()
 	visible = active
+	set_process(active)
 	queue_redraw()
 
 func clear() -> void:
@@ -33,6 +38,7 @@ func clear() -> void:
 	_set_cold_budget_registration(false)
 	active = false
 	visible = false
+	set_process(false)
 	queue_redraw()
 
 func _exit_tree() -> void:

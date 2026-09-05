@@ -12,6 +12,7 @@ const CROWD_SEPARATION_SPEED := 155.0
 const CROWD_MAX_SEPARATION_SPEED := 190.0
 const CROWD_FLOW_SPEED := 42.0
 const MAX_CROWD_NEIGHBOR_CHECKS := 18
+const PLAYER_PUSH_QUERY_PADDING := 128.0
 
 var enemies: Dictionary[int, Enemy] = {}
 var enemy_cells: Dictionary[int, Vector2i] = {}
@@ -144,6 +145,15 @@ func get_crowd_separation(enemy: Enemy, target_position: Vector2) -> Vector2:
 		var density := clampf(float(neighbor_count) / 6.0, 0.0, 1.0)
 		separation += target_direction.orthogonal() * flow_sign * CROWD_FLOW_SPEED * density
 	return separation.limit_length(CROWD_MAX_SEPARATION_SPEED)
+
+func push_enemies_from_player(player_position: Vector2, player_radius: float, player_mass: float, push_speed: float, delta: float) -> void:
+	if push_speed <= 1.0:
+		return
+	for enemy in get_in_radius(player_position, player_radius + PLAYER_PUSH_QUERY_PADDING):
+		var contact_distance := player_radius + enemy.get_body_radius()
+		if player_position.distance_squared_to(enemy.global_position) <= contact_distance * contact_distance:
+			enemy.apply_player_body_push(player_position, player_mass, push_speed, delta)
+
 
 func _process_player_contact_damage() -> void:
 	if not is_instance_valid(player):
