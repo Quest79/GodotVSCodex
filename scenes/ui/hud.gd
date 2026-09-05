@@ -16,6 +16,10 @@ extends CanvasLayer
 @onready var projectile_count_label: Label = %ProjectileCountLabel
 @onready var main_attack_dps_label: Label = %MainAttackDPSLabel
 @onready var fps_label: Label = %FPSLabel
+@onready var frame_cpu_label: Label = %FrameCPULabel
+@onready var physics_cpu_label: Label = %PhysicsCPULabel
+@onready var draw_calls_label: Label = %DrawCallsLabel
+@onready var node_count_label: Label = %NodeCountLabel
 @onready var death_panel: Control = %DeathPanel
 @onready var pause_indicator: Label = %PauseIndicator
 @onready var dash_indicators: Array[ProgressBar] = [%DashIndicator1, %DashIndicator2, %DashIndicator3]
@@ -42,6 +46,10 @@ func _process(delta: float) -> void:
 		return
 	fps_refresh_elapsed = 0.0
 	fps_label.text = str(Engine.get_frames_per_second())
+	frame_cpu_label.text = "%.2f ms" % (Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0)
+	physics_cpu_label.text = "%.2f ms" % (Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0)
+	draw_calls_label.text = str(roundi(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
+	node_count_label.text = str(roundi(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)))
 
 func _sync_health() -> void:
 	var player := get_tree().get_first_node_in_group("player") as Player
