@@ -4,6 +4,7 @@ render_mode unshaded;
 varying float animation_wave;
 varying float hit_amount;
 varying float burn_amount;
+varying float instance_seed;
 varying vec3 ailment_state;
 varying float health_fraction;
 
@@ -23,7 +24,8 @@ void vertex() {
 	ailment_state = COLOR.rgb;
 	health_fraction = COLOR.a;
 	COLOR = vec4(1.0);
-	float phase = INSTANCE_CUSTOM.r * 6.28318530718;
+	instance_seed = instance_seed;
+	float phase = instance_seed * 6.28318530718;
 	float urgency = mix(0.25, 1.0, INSTANCE_CUSTOM.a);
 	float animation = TIME * mix(2.3, 6.2, urgency) + phase;
 	float breathing = sin(animation * 2.0) * 0.055;
@@ -88,10 +90,10 @@ void fragment() {
 
 		for (int ember_index = 0; ember_index < 10; ember_index++) {
 			float fi = float(ember_index);
-			float seed = hash11(fi + INSTANCE_CUSTOM.r * 97.0);
+			float seed = hash11(fi + instance_seed * 97.0);
 			float drift = sin(TIME * (1.4 + seed) + fi * 2.2) * 4.0;
-			float ember_x = mix(-22.0, 22.0, hash11(fi * 3.17 + INSTANCE_CUSTOM.r * 41.0)) + drift;
-			float rise = mod(TIME * (12.0 + seed * 14.0) + fi * 8.3 + INSTANCE_CUSTOM.r * 31.0, 62.0);
+			float ember_x = mix(-22.0, 22.0, hash11(fi * 3.17 + instance_seed * 41.0)) + drift;
+			float rise = mod(TIME * (12.0 + seed * 14.0) + fi * 8.3 + instance_seed * 31.0, 62.0);
 			vec2 ember_pos = vec2(ember_x, 20.0 - rise);
 			float spark = 1.0 - smoothstep(0.8, 2.5, length(point - ember_pos));
 			fx_color += vec3(1.0, 0.38 + seed * 0.35, 0.02) * spark * burn;
@@ -114,10 +116,10 @@ void fragment() {
 	// Shock: animated jagged purple arcs orbit the body.
 	if (shock > 0.001) {
 		float angle = atan(point.y, point.x);
-		float wobble = sin(angle * 5.0 + TIME * 15.0 + INSTANCE_CUSTOM.r * 9.0) * 3.2;
+		float wobble = sin(angle * 5.0 + TIME * 15.0 + instance_seed * 9.0) * 3.2;
 		float arc1 = ring_mask(radius, 29.0 + wobble, 1.25);
 		float arc2 = ring_mask(radius, 34.0 - wobble * 0.45, 0.9);
-		float gaps1 = step(0.56, fract(angle * 1.28 + TIME * 2.3 + INSTANCE_CUSTOM.r));
+		float gaps1 = step(0.56, fract(angle * 1.28 + TIME * 2.3 + instance_seed));
 		float gaps2 = step(0.72, fract(-angle * 1.73 + TIME * 3.1));
 		float bolt = max(arc1 * gaps1, arc2 * gaps2) * shock;
 		float shock_glow = (1.0 - smoothstep(25.0, 40.0, radius)) * shock * (0.45 + 0.35 * sin(TIME * 18.0 + animation_wave));
