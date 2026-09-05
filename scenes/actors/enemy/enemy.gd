@@ -43,7 +43,7 @@ const HEALTH_LABEL_VISIBLE_DURATION := 1.25
 # Rendering every bit of feedback for a 100-enemy AOE burst is far more
 # expensive than the damage calculation itself. These budgets affect visuals
 # only; health, afflictions, knockback, XP, loot, and kill events stay exact.
-const DAMAGE_NUMBER_FRAME_BUDGET := 6
+const DAMAGE_NUMBER_FRAME_BUDGET := 12
 const DEATH_FX_FRAME_BUDGET := 10
 const BURN_EXPLOSION_FX_FRAME_BUDGET := 4
 
