@@ -65,7 +65,9 @@ func _update_speed_status() -> void:
 
 func _update_version_status() -> void:
 	var label := $GameUI/VersionStatus as Label
-	label.text = "v%s" % String(ProjectSettings.get_setting("application/config/version", "DEV"))
+	var version := String(ProjectSettings.get_setting("application/config/version", "DEV"))
+	var build := String(ProjectSettings.get_setting("application/config/build", "dev"))
+	label.text = "v%s  %s" % [version, build]
 
 func _on_enemy_defeated() -> void:
 	score += 10
