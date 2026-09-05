@@ -22,11 +22,13 @@ float hash11(float value) {
 
 void vertex() {
 	ailment_state = COLOR.rgb;
-	health_fraction = COLOR.a;
+	health_fraction = INSTANCE_CUSTOM.a;
 	COLOR = vec4(1.0);
-	instance_seed = instance_seed;
+	instance_seed = INSTANCE_CUSTOM.r;
 	float phase = instance_seed * 6.28318530718;
-	float urgency = mix(0.25, 1.0, INSTANCE_CUSTOM.a);
+	# Health now occupies INSTANCE_CUSTOM.a. Keep the living animation
+	# deterministic and independent of health/transparency.
+	float urgency = 0.78;
 	float animation = TIME * mix(2.3, 6.2, urgency) + phase;
 	float breathing = sin(animation * 2.0) * 0.055;
 	VERTEX.x *= 1.0 + breathing * 0.45;
