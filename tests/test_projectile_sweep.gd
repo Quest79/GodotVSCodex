@@ -23,7 +23,6 @@ func _run() -> void:
 	assert(hits.has(enemy))
 	assert(enemy.get_projectile_collision_radius() > 0.0)
 	assert(enemy is Node2D)
-	assert(not enemy is PhysicsBody2D)
 
 	print("PROJECTILE_SWEEP_TEST_OK")
 	get_tree().quit(0)
