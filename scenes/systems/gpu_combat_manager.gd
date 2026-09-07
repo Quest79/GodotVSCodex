@@ -3,7 +3,7 @@ extends Node
 
 signal backend_ready(enabled: bool)
 
-const GPU_SHADER: RDShaderFile = preload("res://scenes/systems/gpu_combat.glsl")
+const GPU_SHADER_PATH := "res://scenes/systems/gpu_combat.glsl"
 const PROJECTILE_SHADER: Shader = preload("res://scenes/combat/gpu_projectile.gdshader")
 const ARC_SHADER: Shader = preload("res://scenes/combat/gpu_arc.gdshader")
 const BURST_SHADER: Shader = preload("res://scenes/combat/gpu_burst.gdshader")
@@ -175,7 +175,7 @@ func get_enemy_state_texture() -> Texture2D:
 func register_enemy(enemy: Enemy) -> int:
 	if not gpu_enabled or not is_instance_valid(enemy) or enemy_free_slots.is_empty():
 		return -1
-	var slot := enemy_free_slots.pop_back()
+	var slot: int = enemy_free_slots.pop_back()
 	slot_to_enemy[slot] = enemy
 	cpu_positions[slot] = enemy.global_position
 	cpu_active[slot] = 1
@@ -455,9 +455,12 @@ func _make_state_renderer(
 	quad.size = quad_size
 	var mesh_data := MultiMesh.new()
 	mesh_data.transform_format = MultiMesh.TRANSFORM_2D
+	mesh_data.use_custom_data = true
 	mesh_data.mesh = quad
 	mesh_data.instance_count = count
 	mesh_data.visible_instance_count = count
+	for index in range(count):
+		mesh_data.set_instance_custom_data(index, Color(float(index), 0.0, 0.0, 0.0))
 	mesh_data.custom_aabb = AABB(Vector3(-100000.0, -100000.0, -1.0), Vector3(200000.0, 200000.0, 2.0))
 	renderer.multimesh = mesh_data
 	var material := ShaderMaterial.new()
@@ -476,7 +479,11 @@ func _initialize_gpu_on_render_thread() -> void:
 		return
 	rd = local_rd
 
-	var spirv := GPU_SHADER.get_spirv()
+	var shader_file := load(GPU_SHADER_PATH) as RDShaderFile
+	if shader_file == null:
+		_set_render_init_result(false, "Compute shader resource could not be loaded.")
+		return
+	var spirv: RDShaderSPIRV = shader_file.get_spirv()
 	shader_rid = rd.shader_create_from_spirv(spirv)
 	if not shader_rid.is_valid():
 		_set_render_init_result(false, "Compute shader could not be created.")
