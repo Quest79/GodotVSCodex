@@ -27,7 +27,7 @@ void vertex() {
 		VERTEX = vec2(-1000000.0);
 	} else {
 		vec2 direction = normalize(s0.zw + vec2(0.00001, 0.0));
-		mat2 rotation_matrix = mat2(direction.x, -direction.y, direction.y, direction.x);
+		mat2 rotation_matrix = mat2(vec2(direction.x, direction.y), vec2(-direction.y, direction.x));
 		vec2 local = rotation_matrix * (VERTEX * max(s1.y, 0.2));
 		VERTEX = s0.xy + local;
 	}
