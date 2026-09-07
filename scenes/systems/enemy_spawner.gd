@@ -41,10 +41,11 @@ func _on_gpu_backend_ready(_enabled: bool) -> void:
 	call_deferred("_spawn_first_wave")
 
 func _enemy_count() -> int:
-	var count := EnemyRegistry.get_enemy_count()
 	if is_instance_valid(gpu_manager) and gpu_manager.is_gpu_enabled():
-		count += gpu_manager.get_enemy_count()
-	return count
+		# CPU-controlled bosses/orbiters are mirrored into the GPU collision
+		# buffer, so the GPU count already includes them.
+		return gpu_manager.get_enemy_count()
+	return EnemyRegistry.get_enemy_count()
 
 func _spawn_first_wave() -> void:
 	var opening_count := mini(first_wave_starting_enemies, max_alive)
