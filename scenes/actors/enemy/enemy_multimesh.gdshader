@@ -37,6 +37,7 @@ void vertex() {
 	float scale_value = 1.0;
 	vec2 world_position = vec2(0.0);
 	vec2 facing = vec2(1.0, 0.0);
+	bool visible_instance = true;
 
 	if (gpu_state_enabled) {
 		vec4 s0 = read_gpu_state(0, gpu_slot);
@@ -46,18 +47,19 @@ void vertex() {
 		if (instance_active < 0.5) {
 			VERTEX = vec2(-1000000.0);
 			COLOR = vec4(0.0);
-			return;
+			visible_instance = false;
+		} else {
+			world_position = s0.xy;
+			if (dot(s0.zw, s0.zw) > 0.01) {
+				facing = normalize(s0.zw);
+			}
+			health_fraction = s1.y;
+			burn_amount = s1.z;
+			ailment_state = vec3(s1.w, s2.x, s2.y);
+			hit_amount = s2.z;
+			scale_value = max(s2.w, 0.2);
+			instance_seed = fract(gpu_slot * 0.61803398875);
 		}
-		world_position = s0.xy;
-		if (dot(s0.zw, s0.zw) > 0.01) {
-			facing = normalize(s0.zw);
-		}
-		health_fraction = s1.y;
-		burn_amount = s1.z;
-		ailment_state = vec3(s1.w, s2.x, s2.y);
-		hit_amount = s2.z;
-		scale_value = max(s2.w, 0.2);
-		instance_seed = fract(gpu_slot * 0.61803398875);
 	} else {
 		instance_active = 1.0;
 		ailment_state = COLOR.rgb;
@@ -67,25 +69,28 @@ void vertex() {
 		burn_amount = INSTANCE_CUSTOM.g;
 	}
 
-	COLOR = vec4(1.0);
-	float phase = instance_seed * 6.28318530718;
-	float animation = TIME * mix(2.3, 6.2, urgency) + phase;
-	float breathing = sin(animation * 2.0) * 0.055;
-	vec2 local = VERTEX;
-	local.x *= 1.0 + breathing * 0.45;
-	local.y *= 1.0 - breathing;
-	local.x += max(0.0, sin(animation)) * mix(1.0, 4.2, urgency);
-	float pop = 1.0 + hit_amount * 0.18;
-	local *= pop * scale_value;
+	if (visible_instance) {
+		COLOR = vec4(1.0);
+		float phase = instance_seed * 6.28318530718;
+		float animation = TIME * mix(2.3, 6.2, urgency) + phase;
+		float breathing = sin(animation * 2.0) * 0.055;
+		vec2 local = VERTEX;
+		local.x *= 1.0 + breathing * 0.45;
+		local.y *= 1.0 - breathing;
+		local.x += max(0.0, sin(animation)) * mix(1.0, 4.2, urgency);
+		float pop = 1.0 + hit_amount * 0.18;
+		local *= pop * scale_value;
 
-	if (gpu_state_enabled) {
-		mat2 rotation_matrix = mat2(facing.x, -facing.y, facing.y, facing.x);
-		VERTEX = world_position + rotation_matrix * local;
-	} else {
-		VERTEX = local;
+		if (gpu_state_enabled) {
+			mat2 rotation_matrix = mat2(facing.x, -facing.y, facing.y, facing.x);
+			VERTEX = world_position + rotation_matrix * local;
+		} else {
+			VERTEX = local;
+		}
+		animation_wave = animation;
 	}
-	animation_wave = animation;
 }
+
 
 void fragment() {
 	if (instance_active < 0.5) {
