@@ -98,6 +98,10 @@ layout(rgba32f, set = 0, binding = 10) uniform image2D projectile_render;
 layout(rgba32f, set = 0, binding = 11) uniform image2D arc_render;
 layout(rgba32f, set = 0, binding = 12) uniform image2D burst_render;
 
+layout(set = 0, binding = 13, std430) restrict buffer EnemyScratchBuffer {
+	EnemyState items[];
+} enemy_scratch;
+
 layout(push_constant, std430) uniform Params {
 	uvec4 control;
 	vec4 player;
@@ -301,7 +305,7 @@ void queue_explosion(vec2 origin, float radius, float damage, uint skill_type, P
 					vec2 target_position = enemies.items[slot].pos_vel.xy;
 					vec2 delta = target_position - origin;
 					if (dot(delta, delta) <= radius_squared) {
-						queue_hit(slot, damage, skill_type, projectile, delta);
+						queue_hit(slot, damage, 0u, projectile, delta);
 					}
 				}
 				candidate = candidate >= 0 && uint(candidate) < MAX_ENEMIES ? grid_next.items[candidate] : -1;
@@ -354,6 +358,7 @@ void simulate_enemy(uint index) {
 	}
 	EnemyState enemy = enemies.items[index];
 	if (enemy.impact.w <= 0.5) {
+		enemy_scratch.items[index] = enemy;
 		return;
 	}
 
@@ -396,7 +401,7 @@ void simulate_enemy(uint index) {
 		enemy.impact.w = 0.0;
 		enemy.pos_vel.zw = vec2(0.0);
 		spawn_burst(enemy.pos_vel.xy, 4.0, 42.0 * enemy.misc.w);
-		enemies.items[index] = enemy;
+		enemy_scratch.items[index] = enemy;
 		return;
 	}
 
@@ -465,7 +470,13 @@ void simulate_enemy(uint index) {
 	vec2 velocity = chase_velocity + separation + knockback;
 	position += velocity * delta;
 	enemy.pos_vel = vec4(position, velocity);
-	enemies.items[index] = enemy;
+	enemy_scratch.items[index] = enemy;
+}
+
+void commit_enemy(uint index) {
+	if (index < MAX_ENEMIES) {
+		enemies.items[index] = enemy_scratch.items[index];
+	}
 }
 
 void clear_grid(uint index) {
@@ -501,6 +512,22 @@ void simulate_projectile(uint index) {
 	projectile.motion.z -= delta;
 	uint skill_type = uint(round(projectile.flags.z));
 
+	if (dot(projectile.pos_dir.zw, projectile.pos_dir.zw) < 0.0001) {
+		int initial_target = find_nearest_enemy(projectile.pos_dir.xy, 100000.0, -1);
+		if (initial_target < 0) {
+			projectiles.items[index] = projectile;
+			return;
+		}
+		vec2 desired = safe_normalize(enemies.items[uint(initial_target)].pos_vel.xy - projectile.pos_dir.xy);
+		float spread_angle = projectile.extra.y;
+		float spread_cos = cos(spread_angle);
+		float spread_sin = sin(spread_angle);
+		projectile.pos_dir.zw = vec2(
+			desired.x * spread_cos - desired.y * spread_sin,
+			desired.x * spread_sin + desired.y * spread_cos
+		);
+	}
+
 	if (projectile.motion.z <= 0.0) {
 		if (projectile.skill.x > 0.0) {
 			queue_explosion(projectile.pos_dir.xy, projectile.skill.x, projectile.motion.y, skill_type, projectile, -1);
@@ -511,7 +538,7 @@ void simulate_projectile(uint index) {
 	}
 
 	if (projectile.skill.y > 0.0) {
-		int nearest = find_nearest_enemy(projectile.pos_dir.xy, 1400.0, -1);
+		int nearest = find_nearest_enemy(projectile.pos_dir.xy, 100000.0, -1);
 		if (nearest >= 0) {
 			vec2 desired = safe_normalize(enemies.items[uint(nearest)].pos_vel.xy - projectile.pos_dir.xy);
 			float blend = clamp(projectile.skill.y * delta, 0.0, 1.0);
@@ -535,14 +562,14 @@ void simulate_projectile(uint index) {
 		if (skill_type == 3u && projectile.flags.w > 0.0) {
 			chain_lightning(hit_slot, projectile);
 		}
-		if (projectile.skill.x > 0.0) {
-			queue_explosion(hit_position, projectile.skill.x, projectile.motion.y, skill_type, projectile, hit_slot);
-		}
 
 		if (projectile.flags.y > 0.0) {
 			projectile.flags.y -= 1.0;
 			projectile.pos_dir.xy = end_position;
 		} else {
+			if (projectile.skill.x > 0.0) {
+				queue_explosion(hit_position, projectile.skill.x, projectile.motion.y, skill_type, projectile, hit_slot);
+			}
 			projectile.flags.x = 0.0;
 		}
 	} else {
@@ -751,5 +778,7 @@ void main() {
 		write_projectile_render(index);
 	} else if (mode == 8u) {
 		update_fx(index);
+	} else if (mode == 9u) {
+		commit_enemy(index);
 	}
 }
