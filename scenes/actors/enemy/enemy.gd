@@ -111,6 +111,7 @@ var gpu_manager: GPUCombatManager
 var gpu_managed := false
 var gpu_external_mirror := false
 var gpu_slot := -1
+var pending_subunit_damage_number := 0.0
 
 func _ready() -> void:
 	stats = base_stats.duplicate(true)
@@ -188,12 +189,8 @@ func sync_gpu_snapshot(
 		_sync_external_affliction_view(burn_stacks, chill_amount, shock_stacks, freeze_remaining)
 	if is_boss:
 		boss_health_bar.set_health(health.current, health.maximum)
-	if health.current < previous_health and health.current > 0.0 and damage_number_scene:
-		var damage_delta := previous_health - health.current
-		if _consume_feedback_budget(&"damage_number"):
-			var number := damage_number_scene.instantiate() as Node2D
-			number.call("setup", damage_delta, global_position + Vector2(0.0, -24.0))
-			get_tree().current_scene.add_child(number)
+	if health.current < previous_health and health.current > 0.0:
+		_show_or_accumulate_damage_number(previous_health - health.current)
 	if health.current <= 0.0:
 		_on_died()
 
@@ -217,12 +214,31 @@ func _on_health_changed(current: float, _maximum: float) -> void:
 
 func _on_damaged(amount: float) -> void:
 	gpu_hit_flash = 1.0
-	if not damage_number_scene:
+	_show_or_accumulate_damage_number(amount)
+
+
+func _show_or_accumulate_damage_number(amount: float) -> void:
+	if amount <= 0.0 or not damage_number_scene:
 		return
+
+	var display_amount := amount
+	var accumulated_damage := false
+	if amount < 1.0:
+		pending_subunit_damage_number += amount
+		var whole_damage := floori(pending_subunit_damage_number + 0.000001)
+		if whole_damage < 1:
+			return
+		display_amount = float(whole_damage)
+		accumulated_damage = true
+
 	if not is_boss and not _consume_feedback_budget(&"damage_number"):
 		return
+
+	if accumulated_damage:
+		pending_subunit_damage_number -= display_amount
+
 	var number := damage_number_scene.instantiate() as Node2D
-	number.call("setup", amount, global_position + Vector2(0.0, -24.0))
+	number.call("setup", display_amount, global_position + Vector2(0.0, -24.0))
 	get_tree().current_scene.add_child(number)
 
 func _physics_process(delta: float) -> void:
