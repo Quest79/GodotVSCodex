@@ -20,6 +20,7 @@ extends CanvasLayer
 @onready var physics_cpu_label: Label = %PhysicsCPULabel
 @onready var draw_calls_label: Label = %DrawCallsLabel
 @onready var node_count_label: Label = %NodeCountLabel
+@onready var gpu_backend_label: Label = %GPUBackendLabel
 @onready var death_panel: Control = %DeathPanel
 @onready var pause_indicator: Label = %PauseIndicator
 @onready var dash_indicators: Array[ProgressBar] = [%DashIndicator1, %DashIndicator2, %DashIndicator3]
@@ -50,6 +51,8 @@ func _process(delta: float) -> void:
 	physics_cpu_label.text = "%.2f ms" % (Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0)
 	draw_calls_label.text = str(roundi(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
 	node_count_label.text = str(roundi(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)))
+	var gpu_manager := get_tree().get_first_node_in_group("gpu_combat") as GPUCombatManager
+	gpu_backend_label.text = gpu_manager.get_backend_text() if is_instance_valid(gpu_manager) else "CPU FALLBACK"
 
 func _sync_health() -> void:
 	var player := get_tree().get_first_node_in_group("player") as Player
