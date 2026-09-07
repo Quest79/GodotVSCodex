@@ -45,6 +45,7 @@ func _create_shadow_renderer() -> void:
 	shadow_quad.size = SHADOW_SIZE
 	var shadow_data := MultiMesh.new()
 	shadow_data.transform_format = MultiMesh.TRANSFORM_2D
+	shadow_data.use_custom_data = true
 	shadow_data.mesh = shadow_quad
 	shadow_data.instance_count = INITIAL_CAPACITY
 	shadow_data.visible_instance_count = 0
@@ -69,7 +70,9 @@ func bind_gpu_state(state_texture: Texture2D, maximum_instances: int) -> void:
 
 	for index in range(maximum_instances):
 		multimesh.set_instance_transform_2d(index, Transform2D.IDENTITY)
+		multimesh.set_instance_custom_data(index, Color(float(index), 0.0, 0.0, 0.0))
 		shadow_renderer.multimesh.set_instance_transform_2d(index, Transform2D.IDENTITY)
+		shadow_renderer.multimesh.set_instance_custom_data(index, Color(float(index), 0.0, 0.0, 0.0))
 
 	var enemy_material := material as ShaderMaterial
 	enemy_material.set_shader_parameter("gpu_state_tex", state_texture)
