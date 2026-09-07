@@ -82,7 +82,7 @@ void vertex() {
 		local *= pop * scale_value;
 
 		if (gpu_state_enabled) {
-			mat2 rotation_matrix = mat2(facing.x, -facing.y, facing.y, facing.x);
+			mat2 rotation_matrix = mat2(vec2(facing.x, facing.y), vec2(-facing.y, facing.x));
 			VERTEX = world_position + rotation_matrix * local;
 		} else {
 			VERTEX = local;
