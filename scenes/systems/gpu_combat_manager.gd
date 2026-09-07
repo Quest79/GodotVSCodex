@@ -77,6 +77,8 @@ var enemy_free_slots: Array[int] = []
 var slot_to_enemy: Array[Enemy] = []
 var cpu_positions: Array[Vector2] = []
 var cpu_active := PackedByteArray()
+var slot_tokens := PackedInt32Array()
+var next_enemy_token := 1
 var active_enemy_count := 0
 
 var projectile_cursor := 0
@@ -96,6 +98,7 @@ func _ready() -> void:
 	slot_to_enemy.resize(MAX_ENEMIES)
 	cpu_positions.resize(MAX_ENEMIES)
 	cpu_active.resize(MAX_ENEMIES)
+	slot_tokens.resize(MAX_ENEMIES)
 	for index in range(MAX_ENEMIES - 1, -1, -1):
 		enemy_free_slots.append(index)
 
@@ -186,9 +189,14 @@ func register_enemy(enemy: Enemy) -> int:
 	if not gpu_enabled or not is_instance_valid(enemy) or enemy_free_slots.is_empty():
 		return -1
 	var slot: int = enemy_free_slots.pop_back()
+	var token := next_enemy_token
+	next_enemy_token += 1
+	if next_enemy_token >= 16000000:
+		next_enemy_token = 1
 	slot_to_enemy[slot] = enemy
 	cpu_positions[slot] = enemy.global_position
 	cpu_active[slot] = 1
+	slot_tokens[slot] = token
 	active_enemy_count += 1
 
 	var data := PackedByteArray()
@@ -199,7 +207,12 @@ func register_enemy(enemy: Enemy) -> int:
 	_encode_vec4(data, 48, Vector4.ZERO)
 	_encode_vec4(data, 64, Vector4(0.0, 0.0, 0.0, 1.0))
 	_encode_vec4(data, 80, Vector4(0.0, 0.0, 0.0, maxf(absf(enemy.global_scale.x), 1.0)))
-	_encode_vec4(data, 96, Vector4(0.0, 0.0, fmod(float(enemy.get_instance_id()) * 0.000173, 1.0), 0.0))
+	_encode_vec4(data, 96, Vector4(
+		0.0,
+		0.0,
+		fmod(float(enemy.get_instance_id()) * 0.000173, 1.0),
+		float(token)
+	))
 	_enqueue_upload(&"enemy", slot, data)
 	return slot
 
@@ -215,6 +228,7 @@ func unregister_enemy(enemy: Enemy) -> void:
 
 	slot_to_enemy[slot] = null
 	cpu_active[slot] = 0
+	slot_tokens[slot] = 0
 	active_enemy_count = maxi(0, active_enemy_count - 1)
 	enemy_free_slots.append(slot)
 
@@ -674,6 +688,11 @@ func _process_enemy_snapshot(data: PackedByteArray) -> void:
 		var freeze_remaining := data.decode_float(base + 44)
 		var hit_flash := data.decode_float(base + 72)
 		var active := data.decode_float(base + 76) > 0.5
+		var snapshot_token := roundi(data.decode_float(base + 108))
+		if snapshot_token != slot_tokens[slot]:
+			# Async readback may belong to the previous occupant of this slot.
+			# Never let a stale zero/death snapshot kill a newly spawned enemy.
+			continue
 
 		cpu_positions[slot] = position
 		if active:
