@@ -9,7 +9,7 @@ uniform float gpu_state_rows = 3.0;
 varying float instance_active;
 
 vec4 read_gpu_state(int row) {
-	vec2 uv = vec2((float(INSTANCE_ID) + 0.5) / gpu_state_width, (float(row) + 0.5) / gpu_state_rows);
+	vec2 uv = vec2((INSTANCE_CUSTOM.r + 0.5) / gpu_state_width, (float(row) + 0.5) / gpu_state_rows);
 	return textureLod(gpu_state_tex, uv, 0.0);
 }
 
