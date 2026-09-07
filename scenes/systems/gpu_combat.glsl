@@ -405,6 +405,13 @@ void simulate_enemy(uint index) {
 		return;
 	}
 
+	// CPU-controlled special enemies (bosses/orbiters) remain in the GPU
+	// collision/status buffer but keep their CPU-authored movement/AI.
+	if (enemy.extra.y > 0.5) {
+		enemy_scratch.items[index] = enemy;
+		return;
+	}
+
 	vec2 position = enemy.pos_vel.xy;
 	vec2 separation = vec2(0.0);
 	int neighbor_count = 0;
