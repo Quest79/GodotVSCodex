@@ -28,11 +28,13 @@ const CONTACT_CHECK_INTERVAL := 0.1
 const XP_CLUSTER_SIZE := 160.0
 
 var rd: RenderingDevice
+var gpu_shader_file: RDShaderFile
 var shader_rid := RID()
 var pipeline_rid := RID()
 var uniform_set_rid := RID()
 
 var enemy_buffer := RID()
+var enemy_scratch_buffer := RID()
 var projectile_buffer := RID()
 var grid_heads_buffer := RID()
 var grid_next_buffer := RID()
@@ -96,6 +98,14 @@ func _ready() -> void:
 	cpu_active.resize(MAX_ENEMIES)
 	for index in range(MAX_ENEMIES - 1, -1, -1):
 		enemy_free_slots.append(index)
+
+	gpu_shader_file = load(GPU_SHADER_PATH) as RDShaderFile
+	if gpu_shader_file == null:
+		render_init_complete = true
+		render_init_success = false
+		render_init_error = "Compute shader resource could not be loaded."
+		call_deferred("_finish_backend_initialization")
+		return
 
 	rd = RenderingServer.get_rendering_device()
 	if rd == null:
@@ -221,14 +231,10 @@ func fire_skill(
 	base_projectile_scale: float,
 	attack_range: float
 ) -> bool:
-	if not gpu_enabled:
+	if not gpu_enabled or active_enemy_count <= 0:
 		return false
 
 	var projectile_count := maxi(1, roundi(float(skill_config.get(&"projectile_count", 1.0))))
-	var target_slots := _nearest_enemy_slots(origin, projectile_count, attack_range)
-	if target_slots.is_empty():
-		return false
-
 	var spread := deg_to_rad(float(skill_config.get(&"spread_degrees", 0.0)))
 	var skill_id := StringName(skill_config.get(&"skill_id", &"default_attack"))
 	var skill_type := _skill_type_for_id(skill_id)
@@ -237,15 +243,6 @@ func fire_skill(
 	var lifetime := 2.0 * float(skill_config.get(&"duration_multiplier", 1.0))
 
 	for index in range(projectile_count):
-		var target_slot := target_slots[index % target_slots.size()]
-		var target_position := cpu_positions[target_slot]
-		var direction := origin.direction_to(target_position)
-		if direction == Vector2.ZERO:
-			direction = Vector2.RIGHT
-		if target_slots.size() == 1 and projectile_count > 1:
-			var angle_offset := lerpf(-spread * 0.5, spread * 0.5, float(index) / float(projectile_count - 1))
-			direction = direction.rotated(angle_offset)
-
 		var projectile_damage := base_damage * float(skill_config.get(&"damage_multiplier", 1.0))
 		if skill_config.has(&"damage_min") and skill_config.has(&"damage_max"):
 			projectile_damage = randf_range(
@@ -253,11 +250,17 @@ func fire_skill(
 				float(skill_config.get(&"damage_max", base_damage))
 			) * float(skill_config.get(&"damage_multiplier", 1.0))
 
+		var angle_offset := 0.0
+		if projectile_count > 1:
+			angle_offset = lerpf(-spread * 0.5, spread * 0.5, float(index) / float(projectile_count - 1))
+
 		var slot := projectile_cursor
 		projectile_cursor = (projectile_cursor + 1) % MAX_PROJECTILES
 		var data := PackedByteArray()
 		data.resize(PROJECTILE_STRIDE)
-		_encode_vec4(data, 0, Vector4(origin.x, origin.y, direction.x, direction.y))
+		# Direction starts at zero. The compute shader acquires the initial target
+		# from the GPU enemy buffer and applies this projectile's spread offset.
+		_encode_vec4(data, 0, Vector4(origin.x, origin.y, 0.0, 0.0))
 		_encode_vec4(data, 16, Vector4(speed, projectile_damage, lifetime, scale_value))
 		_encode_vec4(data, 32, Vector4(
 			1.0,
@@ -278,7 +281,7 @@ func fire_skill(
 			float(skill_config.get(&"chill_duration", 0.0)) * duration_multiplier,
 			float(skill_config.get(&"freeze_buildup_multiplier", 0.0))
 		))
-		_encode_vec4(data, 80, Vector4(lifetime, randf(), 0.0, 0.0))
+		_encode_vec4(data, 80, Vector4(lifetime, angle_offset, 0.0, 0.0))
 		_enqueue_upload(&"projectile", slot, data)
 	return true
 
@@ -479,11 +482,7 @@ func _initialize_gpu_on_render_thread() -> void:
 		return
 	rd = local_rd
 
-	var shader_file := load(GPU_SHADER_PATH) as RDShaderFile
-	if shader_file == null:
-		_set_render_init_result(false, "Compute shader resource could not be loaded.")
-		return
-	var spirv: RDShaderSPIRV = shader_file.get_spirv()
+	var spirv: RDShaderSPIRV = gpu_shader_file.get_spirv()
 	shader_rid = rd.shader_create_from_spirv(spirv)
 	if not shader_rid.is_valid():
 		_set_render_init_result(false, "Compute shader could not be created.")
@@ -494,6 +493,7 @@ func _initialize_gpu_on_render_thread() -> void:
 		return
 
 	enemy_buffer = rd.storage_buffer_create(MAX_ENEMIES * ENEMY_STRIDE, _zero_bytes(MAX_ENEMIES * ENEMY_STRIDE))
+	enemy_scratch_buffer = rd.storage_buffer_create(MAX_ENEMIES * ENEMY_STRIDE, _zero_bytes(MAX_ENEMIES * ENEMY_STRIDE))
 	projectile_buffer = rd.storage_buffer_create(MAX_PROJECTILES * PROJECTILE_STRIDE, _zero_bytes(MAX_PROJECTILES * PROJECTILE_STRIDE))
 	grid_heads_buffer = rd.storage_buffer_create(GRID_BUCKETS * 4, _zero_bytes(GRID_BUCKETS * 4))
 	grid_next_buffer = rd.storage_buffer_create(MAX_ENEMIES * 4, _zero_bytes(MAX_ENEMIES * 4))
@@ -526,6 +526,7 @@ func _initialize_gpu_on_render_thread() -> void:
 	uniforms.append(_image_uniform(10, projectile_texture_rid))
 	uniforms.append(_image_uniform(11, arc_texture_rid))
 	uniforms.append(_image_uniform(12, burst_texture_rid))
+	uniforms.append(_storage_uniform(13, enemy_scratch_buffer))
 
 	uniform_set_rid = rd.uniform_set_create(uniforms, shader_rid, 0)
 	if not uniform_set_rid.is_valid():
@@ -571,18 +572,33 @@ func _dispatch_gpu_on_render_thread() -> void:
 	rd.compute_list_bind_compute_pipeline(compute_list, pipeline_rid)
 	rd.compute_list_bind_uniform_set(compute_list, uniform_set_rid, 0)
 
-	_dispatch_mode(compute_list, 0, MAX_ENEMIES, delta, time_value, player_position, player_velocity, player_radius)
-	rd.compute_list_add_barrier(compute_list)
+	# Build a grid from the stable input state, simulate enemies into scratch,
+	# commit the result, then rebuild the grid for projectile collision.
 	_dispatch_mode(compute_list, 1, GRID_BUCKETS, delta, time_value, player_position, player_velocity, player_radius)
 	rd.compute_list_add_barrier(compute_list)
 	_dispatch_mode(compute_list, 2, MAX_ENEMIES, delta, time_value, player_position, player_velocity, player_radius)
 	rd.compute_list_add_barrier(compute_list)
+	_dispatch_mode(compute_list, 0, MAX_ENEMIES, delta, time_value, player_position, player_velocity, player_radius)
+	rd.compute_list_add_barrier(compute_list)
+	_dispatch_mode(compute_list, 9, MAX_ENEMIES, delta, time_value, player_position, player_velocity, player_radius)
+	rd.compute_list_add_barrier(compute_list)
+
+	_dispatch_mode(compute_list, 1, GRID_BUCKETS, delta, time_value, player_position, player_velocity, player_radius)
+	rd.compute_list_add_barrier(compute_list)
+	_dispatch_mode(compute_list, 2, MAX_ENEMIES, delta, time_value, player_position, player_velocity, player_radius)
+	rd.compute_list_add_barrier(compute_list)
+
 	_dispatch_mode(compute_list, 3, MAX_PROJECTILES, delta, time_value, player_position, player_velocity, player_radius)
 	rd.compute_list_add_barrier(compute_list)
 	_dispatch_mode(compute_list, 4, MAX_ENEMIES, delta, time_value, player_position, player_velocity, player_radius)
 	rd.compute_list_add_barrier(compute_list)
 	_dispatch_mode(compute_list, 5, MAX_ENEMIES, delta, time_value, player_position, player_velocity, player_radius)
 	rd.compute_list_add_barrier(compute_list)
+	# Burning-stack explosions queue damage, so apply pending damage once more
+	# before rendering to keep explosion damage in the same simulation tick.
+	_dispatch_mode(compute_list, 4, MAX_ENEMIES, delta, time_value, player_position, player_velocity, player_radius)
+	rd.compute_list_add_barrier(compute_list)
+
 	_dispatch_mode(compute_list, 6, MAX_ENEMIES, delta, time_value, player_position, player_velocity, player_radius)
 	rd.compute_list_add_barrier(compute_list)
 	_dispatch_mode(compute_list, 7, MAX_PROJECTILES, delta, time_value, player_position, player_velocity, player_radius)
@@ -731,6 +747,7 @@ func _free_gpu_on_render_thread() -> void:
 		pipeline_rid,
 		shader_rid,
 		enemy_buffer,
+		enemy_scratch_buffer,
 		projectile_buffer,
 		grid_heads_buffer,
 		grid_next_buffer,
