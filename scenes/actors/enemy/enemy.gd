@@ -109,6 +109,7 @@ var cached_projectile_collision_radius := PROJECTILE_COLLISION_RADIUS
 var render_manager: EnemyRenderManager
 var gpu_manager: GPUCombatManager
 var gpu_managed := false
+var gpu_external_mirror := false
 var gpu_slot := -1
 
 func _ready() -> void:
@@ -138,7 +139,7 @@ func _ready() -> void:
 	crowd_separation_refresh_elapsed = fmod(float(get_instance_id()) * 0.000173, CROWD_SEPARATION_REFRESH_INTERVAL)
 
 func _exit_tree() -> void:
-	if gpu_managed and is_instance_valid(gpu_manager):
+	if (gpu_managed or gpu_external_mirror) and is_instance_valid(gpu_manager):
 		gpu_manager.unregister_enemy(self)
 	elif is_instance_valid(render_manager):
 		render_manager.unregister_enemy(self)
@@ -146,15 +147,19 @@ func _exit_tree() -> void:
 		EnemyRegistry.unregister(self)
 
 func _leave_gpu_management_for_cpu() -> void:
+	if gpu_external_mirror:
+		set_physics_process(true)
+		return
 	if not gpu_managed:
 		set_physics_process(true)
 		return
-	if is_instance_valid(gpu_manager):
-		gpu_manager.unregister_enemy(self)
 	gpu_managed = false
-	gpu_slot = -1
+	gpu_external_mirror = true
 	set_physics_process(true)
 	EnemyRegistry.register(self)
+	render_manager = get_tree().get_first_node_in_group("enemy_render_manager") as EnemyRenderManager
+	if is_instance_valid(gpu_manager):
+		gpu_manager.mark_enemy_external(self)
 
 
 func sync_gpu_snapshot(
@@ -167,17 +172,22 @@ func sync_gpu_snapshot(
 	freeze_remaining: float,
 	hit_flash: float
 ) -> void:
-	if not gpu_managed or dying:
+	if (not gpu_managed and not gpu_external_mirror) or dying:
 		return
 	var previous_health := health.current
-	global_position = new_position
-	velocity = new_velocity
+	if gpu_managed:
+		global_position = new_position
+		velocity = new_velocity
 	health.current = maxf(new_health, 0.0)
 	gpu_burn_intensity = clampf(burn_stacks / float(BURNING_STACK_THRESHOLD), 0.0, 1.0)
 	gpu_chill_intensity = clampf(chill_amount / CHILL_MAX_EFFECT, 0.0, 1.0)
 	gpu_shock_intensity = clampf(shock_stacks / float(SHOCK_MAX_STACKS), 0.0, 1.0)
 	gpu_frozen_amount = 1.0 if freeze_remaining > 0.0 else 0.0
 	gpu_hit_flash = hit_flash
+	if gpu_external_mirror:
+		_sync_external_affliction_view(burn_stacks, chill_amount, shock_stacks, freeze_remaining)
+	if is_boss:
+		boss_health_bar.set_health(health.current, health.maximum)
 	if health.current < previous_health and health.current > 0.0 and damage_number_scene:
 		var damage_delta := previous_health - health.current
 		if _consume_feedback_budget(&"damage_number"):
@@ -186,6 +196,19 @@ func sync_gpu_snapshot(
 			get_tree().current_scene.add_child(number)
 	if health.current <= 0.0:
 		_on_died()
+
+
+func _sync_external_affliction_view(burn_stacks: float, chill_amount: float, shock_stacks: float, freeze_remaining: float) -> void:
+	afflictions.clear()
+	if burn_stacks > 0.0:
+		afflictions[&"burning"] = {"stacks": roundi(burn_stacks), "remaining": 1.0}
+	if chill_amount > 0.0:
+		afflictions[&"chilled"] = {"magnitude": chill_amount, "stacks": roundi(chill_amount * 100.0), "remaining": 1.0}
+	if shock_stacks > 0.0:
+		afflictions[&"shocked"] = {"stacks": roundi(shock_stacks), "remaining": 1.0}
+	if freeze_remaining > 0.0:
+		afflictions[&"frozen"] = {"stacks": 1, "remaining": freeze_remaining}
+	_sync_affliction_visuals()
 
 
 func _on_health_changed(current: float, _maximum: float) -> void:
@@ -204,20 +227,24 @@ func _on_damaged(amount: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_gpu_visual_state(delta)
-	_process_afflictions(delta)
+	if not gpu_external_mirror:
+		_process_afflictions(delta)
 	_update_crowd_separation(delta)
 	if is_frozen():
 		velocity = Vector2.ZERO
 		impact_velocity = Vector2.ZERO
 		EnemyRegistry.update_enemy(self)
+		_sync_external_gpu_transform()
 		return
 	if not is_instance_valid(target):
 		velocity = impact_velocity
 		_decay_impact_velocity(delta)
 		EnemyRegistry.update_enemy(self)
+		_sync_external_gpu_transform()
 		return
 	if _process_boss_orbit(delta):
 		EnemyRegistry.update_enemy(self)
+		_sync_external_gpu_transform()
 		return
 	if launch_elapsed > 0.0:
 		launch_elapsed = maxf(launch_elapsed - delta, 0.0)
@@ -225,6 +252,7 @@ func _physics_process(delta: float) -> void:
 		_decay_impact_velocity(delta)
 		global_position += velocity * delta
 		EnemyRegistry.update_enemy(self)
+		_sync_external_gpu_transform()
 		return
 	var action_speed_multiplier := _cold_action_speed_multiplier()
 	var chase_velocity := global_position.direction_to(target.global_position) * stats.move_speed * action_speed_multiplier
@@ -239,6 +267,12 @@ func _physics_process(delta: float) -> void:
 		_process_boss_attack(delta)
 		_process_boss_orbit_barrage(delta)
 	EnemyRegistry.update_enemy(self)
+	_sync_external_gpu_transform()
+
+
+func _sync_external_gpu_transform() -> void:
+	if gpu_external_mirror and is_instance_valid(gpu_manager):
+		gpu_manager.sync_external_enemy_transform(self)
 
 func _process_boss_attack(delta: float) -> void:
 	boss_attack_elapsed += delta * _boss_action_speed()
@@ -583,6 +617,8 @@ func configure_boss() -> void:
 	health.configure(stats.max_health)
 	_sync_affliction_visuals()
 	boss_health_bar.configure("BOSS 1  //  RIFT MAW", stats.max_health, Color(1.0, 0.08, 0.46, 0.98))
+	if gpu_external_mirror and is_instance_valid(gpu_manager):
+		gpu_manager.sync_external_enemy_state(self)
 	var presence: Node2D = BOSS_PRESENCE_FX.new()
 	presence.z_index = -1
 	add_child(presence)

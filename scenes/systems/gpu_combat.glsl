@@ -138,10 +138,10 @@ void spawn_arc(vec2 start_position, vec2 end_position, float width) {
 	arcs.items[slot].state = vec4(0.18, 0.18, width, 1.0);
 }
 
-void spawn_burst(vec2 position, float type_id, float radius) {
+void spawn_burst(vec2 position, float type_id, float radius, float direction_angle) {
 	uint slot = atomicAdd(counters.burst_write, 1u) % MAX_BURSTS;
 	bursts.items[slot].pos_type = vec4(position, type_id, radius);
-	bursts.items[slot].state = vec4(0.28, 0.28, 1.0, 1.0);
+	bursts.items[slot].state = vec4(0.34, 0.34, direction_angle, 1.0);
 }
 
 void queue_hit(uint enemy_index, float damage, uint skill_type, ProjectileState projectile, vec2 hit_direction) {
@@ -313,7 +313,7 @@ void queue_explosion(vec2 origin, float radius, float damage, uint skill_type, P
 			}
 		}
 	}
-	spawn_burst(origin, skill_type == 1u ? 5.0 : float(skill_type), radius);
+	spawn_burst(origin, 20.0 + float(skill_type), radius, 0.0);
 }
 
 void chain_lightning(int first_slot, ProjectileState projectile) {
@@ -342,7 +342,7 @@ void chain_lightning(int first_slot, ProjectileState projectile) {
 		vec2 next_position = enemies.items[uint(next_slot)].pos_vel.xy;
 		queue_hit(uint(next_slot), jump_damage, 3u, projectile, next_position - current_position);
 		spawn_arc(current_position, next_position, 5.0);
-		spawn_burst(next_position, 3.0, 28.0);
+		spawn_burst(next_position, 13.0, 28.0, atan((next_position - current_position).y, (next_position - current_position).x));
 		if (visited_count < 8) {
 			visited[visited_count] = next_slot;
 			visited_count++;
@@ -400,7 +400,14 @@ void simulate_enemy(uint index) {
 		enemy.health_move.x = 0.0;
 		enemy.impact.w = 0.0;
 		enemy.pos_vel.zw = vec2(0.0);
-		spawn_burst(enemy.pos_vel.xy, 4.0, 42.0 * enemy.misc.w);
+		spawn_burst(enemy.pos_vel.xy, 30.0, 19.0 * enemy.misc.w, 0.0);
+		enemy_scratch.items[index] = enemy;
+		return;
+	}
+
+	// CPU-controlled special enemies (bosses/orbiters) remain in the GPU
+	// collision/status buffer but keep their CPU-authored movement/AI.
+	if (enemy.extra.y > 0.5) {
 		enemy_scratch.items[index] = enemy;
 		return;
 	}
@@ -555,7 +562,7 @@ void simulate_projectile(uint index) {
 		uint slot = uint(hit_slot);
 		vec2 hit_position = enemies.items[slot].pos_vel.xy;
 		queue_hit(slot, projectile.motion.y, skill_type, projectile, hit_position - start_position);
-		spawn_burst(hit_position, float(skill_type), 24.0 * projectile.motion.w);
+		spawn_burst(hit_position, 10.0 + float(skill_type), 24.0 * projectile.motion.w, atan((hit_position - start_position).y, (hit_position - start_position).x));
 		projectile.extra.z = float(hit_slot + 1);
 		projectile.extra.w = 0.5;
 
@@ -655,7 +662,7 @@ void apply_pending_hit(uint index) {
 		enemy.health_move.x = 0.0;
 		enemy.impact.w = 0.0;
 		enemy.pos_vel.zw = vec2(0.0);
-		spawn_burst(enemy.pos_vel.xy, 4.0, 42.0 * enemy.misc.w);
+		spawn_burst(enemy.pos_vel.xy, 30.0, 19.0 * enemy.misc.w, 0.0);
 	}
 
 	enemies.items[index] = enemy;
@@ -699,7 +706,7 @@ void process_burn_explosion(uint index) {
 			}
 		}
 	}
-	spawn_burst(origin, 5.0, BURN_EXPLOSION_RADIUS);
+	spawn_burst(origin, 20.0, BURN_EXPLOSION_RADIUS, 0.0);
 }
 
 void write_enemy_render(uint index) {
