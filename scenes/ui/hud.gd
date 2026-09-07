@@ -20,6 +20,7 @@ extends CanvasLayer
 @onready var physics_cpu_label: Label = %PhysicsCPULabel
 @onready var draw_calls_label: Label = %DrawCallsLabel
 @onready var node_count_label: Label = %NodeCountLabel
+@onready var gpu_backend_label: Label = %GPUBackendLabel
 @onready var death_panel: Control = %DeathPanel
 @onready var pause_indicator: Label = %PauseIndicator
 @onready var dash_indicators: Array[ProgressBar] = [%DashIndicator1, %DashIndicator2, %DashIndicator3]
