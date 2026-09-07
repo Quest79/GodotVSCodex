@@ -9,32 +9,33 @@ varying float v_active;
 varying float v_life;
 varying float v_seed;
 
-vec4 read_state(int row) {
-	vec2 uv = vec2((gpu_slot + 0.5) / state_width, (float(row) + 0.5) / state_rows);
+vec4 read_state(int row, float slot) {
+	vec2 uv = vec2((slot + 0.5) / state_width, (float(row) + 0.5) / state_rows);
 	return textureLod(state_tex, uv, 0.0);
 }
 
 void vertex() {
 	float gpu_slot = INSTANCE_CUSTOM.r;
-	vec4 ends = read_state(0);
-	vec4 state = read_state(1);
+	vec4 ends = read_state(0, gpu_slot);
+	vec4 state = read_state(1, gpu_slot);
 	v_active = state.w;
 	v_life = state.y > 0.0 ? state.x / state.y : 0.0;
 	v_seed = fract(gpu_slot * 0.754877666);
 	if (v_active < 0.5) {
 		VERTEX = vec2(-1000000.0);
-		return;
+	} else {
+		vec2 start_position = ends.xy;
+		vec2 end_position = ends.zw;
+		vec2 delta = end_position - start_position;
+		float line_length = max(length(delta), 0.001);
+		vec2 tangent = delta / line_length;
+		vec2 normal = vec2(-tangent.y, tangent.x);
+		vec2 midpoint = (start_position + end_position) * 0.5;
+		float width = max(state.z, 2.0) * 4.0;
+		VERTEX = midpoint + tangent * (VERTEX.x * line_length) + normal * (VERTEX.y * width);
 	}
-	vec2 start_position = ends.xy;
-	vec2 end_position = ends.zw;
-	vec2 delta = end_position - start_position;
-	float line_length = max(length(delta), 0.001);
-	vec2 tangent = delta / line_length;
-	vec2 normal = vec2(-tangent.y, tangent.x);
-	vec2 midpoint = (start_position + end_position) * 0.5;
-	float width = max(state.z, 2.0) * 4.0;
-	VERTEX = midpoint + tangent * (VERTEX.x * line_length) + normal * (VERTEX.y * width);
 }
+
 
 void fragment() {
 	if (v_active < 0.5) {
