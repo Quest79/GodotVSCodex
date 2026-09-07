@@ -217,6 +217,52 @@ func register_enemy(enemy: Enemy) -> int:
 	return slot
 
 
+func mark_enemy_external(enemy: Enemy) -> void:
+	if not gpu_enabled or not is_instance_valid(enemy):
+		return
+	var slot := enemy.gpu_slot
+	if slot < 0 or slot >= MAX_ENEMIES or slot_to_enemy[slot] != enemy:
+		return
+	var flag := PackedByteArray()
+	flag.resize(4)
+	flag.encode_float(0, 1.0)
+	_enqueue_upload(&"enemy_external_flag", slot, flag)
+
+
+func sync_external_enemy_state(enemy: Enemy) -> void:
+	if not gpu_enabled or not is_instance_valid(enemy):
+		return
+	var slot := enemy.gpu_slot
+	if slot < 0 or slot >= MAX_ENEMIES or slot_to_enemy[slot] != enemy:
+		return
+	var transform_data := PackedByteArray()
+	transform_data.resize(16)
+	_encode_vec4(transform_data, 0, Vector4(enemy.global_position.x, enemy.global_position.y, enemy.velocity.x, enemy.velocity.y))
+	_enqueue_upload(&"enemy_transform", slot, transform_data)
+
+	var stats_data := PackedByteArray()
+	stats_data.resize(16)
+	_encode_vec4(stats_data, 0, Vector4(enemy.health.current, enemy.health.maximum, enemy.stats.move_speed, enemy.get_projectile_collision_radius()))
+	_enqueue_upload(&"enemy_stats", slot, stats_data)
+
+	var scale_data := PackedByteArray()
+	scale_data.resize(4)
+	scale_data.encode_float(0, maxf(absf(enemy.global_scale.x), 1.0))
+	_enqueue_upload(&"enemy_scale", slot, scale_data)
+
+
+func sync_external_enemy_transform(enemy: Enemy) -> void:
+	if not gpu_enabled or not is_instance_valid(enemy):
+		return
+	var slot := enemy.gpu_slot
+	if slot < 0 or slot >= MAX_ENEMIES or slot_to_enemy[slot] != enemy:
+		return
+	var data := PackedByteArray()
+	data.resize(16)
+	_encode_vec4(data, 0, Vector4(enemy.global_position.x, enemy.global_position.y, enemy.velocity.x, enemy.velocity.y))
+	_enqueue_upload(&"enemy_transform", slot, data)
+
+
 func unregister_enemy(enemy: Enemy) -> void:
 	if not enemy:
 		return
@@ -579,6 +625,14 @@ func _dispatch_gpu_on_render_thread() -> void:
 		var data: PackedByteArray = upload["data"]
 		if kind == &"enemy":
 			rd.buffer_update(enemy_buffer, slot * ENEMY_STRIDE, ENEMY_STRIDE, data)
+		elif kind == &"enemy_transform":
+			rd.buffer_update(enemy_buffer, slot * ENEMY_STRIDE, 16, data)
+		elif kind == &"enemy_stats":
+			rd.buffer_update(enemy_buffer, slot * ENEMY_STRIDE + 16, 16, data)
+		elif kind == &"enemy_scale":
+			rd.buffer_update(enemy_buffer, slot * ENEMY_STRIDE + 92, 4, data)
+		elif kind == &"enemy_external_flag":
+			rd.buffer_update(enemy_buffer, slot * ENEMY_STRIDE + 100, 4, data)
 		elif kind == &"projectile":
 			rd.buffer_update(projectile_buffer, slot * PROJECTILE_STRIDE, PROJECTILE_STRIDE, data)
 
