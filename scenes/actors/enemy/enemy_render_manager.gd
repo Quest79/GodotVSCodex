@@ -87,6 +87,24 @@ func bind_gpu_state(state_texture: Texture2D, maximum_instances: int) -> void:
 	shadow_material.set_shader_parameter("gpu_state_rows", 3.0)
 
 
+func unbind_gpu_state() -> void:
+	if not gpu_state_bound:
+		return
+	gpu_state_bound = false
+	var enemy_material := material as ShaderMaterial
+	if enemy_material:
+		enemy_material.set_shader_parameter("gpu_state_enabled", false)
+		enemy_material.set_shader_parameter("gpu_state_tex", null)
+	var shadow_material := shadow_renderer.material as ShaderMaterial
+	if shadow_material:
+		shadow_material.set_shader_parameter("gpu_state_enabled", false)
+		shadow_material.set_shader_parameter("gpu_state_tex", null)
+	if multimesh:
+		multimesh.visible_instance_count = rendered_enemies.size()
+	if is_instance_valid(shadow_renderer) and shadow_renderer.multimesh:
+		shadow_renderer.multimesh.visible_instance_count = rendered_enemies.size()
+
+
 func register_enemy(enemy: Enemy) -> void:
 	if gpu_state_bound:
 		return
