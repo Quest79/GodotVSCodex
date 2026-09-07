@@ -10,7 +10,7 @@ varying float v_life;
 varying float v_seed;
 
 vec4 read_state(int row) {
-	vec2 uv = vec2((float(INSTANCE_ID) + 0.5) / state_width, (float(row) + 0.5) / state_rows);
+	vec2 uv = vec2((INSTANCE_CUSTOM.r + 0.5) / state_width, (float(row) + 0.5) / state_rows);
 	return textureLod(state_tex, uv, 0.0);
 }
 
@@ -19,7 +19,7 @@ void vertex() {
 	vec4 state = read_state(1);
 	v_active = state.w;
 	v_life = state.y > 0.0 ? state.x / state.y : 0.0;
-	v_seed = fract(float(INSTANCE_ID) * 0.754877666);
+	v_seed = fract(INSTANCE_CUSTOM.r * 0.754877666);
 	if (v_active < 0.5) {
 		VERTEX = vec2(-1000000.0);
 		return;
