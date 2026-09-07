@@ -11,17 +11,18 @@ varying float v_life;
 varying float v_seed;
 
 vec4 read_state(int row) {
-	vec2 uv = vec2((INSTANCE_CUSTOM.r + 0.5) / state_width, (float(row) + 0.5) / state_rows);
+	vec2 uv = vec2((gpu_slot + 0.5) / state_width, (float(row) + 0.5) / state_rows);
 	return textureLod(state_tex, uv, 0.0);
 }
 
 void vertex() {
+	float gpu_slot = INSTANCE_CUSTOM.r;
 	vec4 s0 = read_state(0);
 	vec4 s1 = read_state(1);
 	v_active = s1.w;
 	v_type = s0.z;
 	v_life = s1.y > 0.0 ? s1.x / s1.y : 0.0;
-	v_seed = fract(INSTANCE_CUSTOM.r * 0.569840296);
+	v_seed = fract(gpu_slot * 0.569840296);
 	if (v_active < 0.5) {
 		VERTEX = vec2(-1000000.0);
 		return;
