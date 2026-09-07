@@ -707,14 +707,14 @@ void write_enemy_render(uint index) {
 		return;
 	}
 	EnemyState enemy = enemies.items[index];
-	float active = enemy.impact.w > 0.5 ? 1.0 : 0.0;
+	float active_flag = enemy.impact.w > 0.5 ? 1.0 : 0.0;
 	float health_fraction = enemy.health_move.y > 0.0 ? clamp(enemy.health_move.x / enemy.health_move.y, 0.0, 1.0) : 0.0;
 	float burn = clamp(enemy.status.x / BURN_STACK_THRESHOLD, 0.0, 1.0);
 	float chill = clamp(enemy.status.y / CHILL_MAX_EFFECT, 0.0, 1.0);
 	float shock = clamp(enemy.status.z / SHOCK_MAX_STACKS, 0.0, 1.0);
 	float frozen = enemy.status.w > 0.0 ? 1.0 : 0.0;
 	imageStore(enemy_render, ivec2(int(index), 0), vec4(enemy.pos_vel.xy, enemy.pos_vel.zw));
-	imageStore(enemy_render, ivec2(int(index), 1), vec4(active, health_fraction, burn, chill));
+	imageStore(enemy_render, ivec2(int(index), 1), vec4(active_flag, health_fraction, burn, chill));
 	imageStore(enemy_render, ivec2(int(index), 2), vec4(shock, frozen, enemy.impact.z, max(enemy.misc.w, 1.0)));
 }
 
@@ -723,10 +723,10 @@ void write_projectile_render(uint index) {
 		return;
 	}
 	ProjectileState projectile = projectiles.items[index];
-	float active = projectile.flags.x > 0.5 ? 1.0 : 0.0;
+	float active_flag = projectile.flags.x > 0.5 ? 1.0 : 0.0;
 	float life_fraction = projectile.extra.x > 0.0 ? clamp(projectile.motion.z / projectile.extra.x, 0.0, 1.0) : 0.0;
 	imageStore(projectile_render, ivec2(int(index), 0), vec4(projectile.pos_dir.xy, projectile.pos_dir.zw));
-	imageStore(projectile_render, ivec2(int(index), 1), vec4(active, projectile.motion.w, projectile.flags.z, life_fraction));
+	imageStore(projectile_render, ivec2(int(index), 1), vec4(active_flag, projectile.motion.w, projectile.flags.z, life_fraction));
 }
 
 void update_fx(uint index) {
