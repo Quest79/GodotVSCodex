@@ -82,6 +82,7 @@ jobs:
             --display-driver x11 \
             --rendering-method forward_plus \
             --rendering-driver vulkan \
+            --audio-driver Dummy \
             2>&1 | tee gpu_backend.log
           grep -q "GPU_BACKEND_TEST_OK" gpu_backend.log
           if grep -E "SCRIPT ERROR|Parse Error|SHADER ERROR|ERROR:" gpu_backend.log; then exit 1; fi
