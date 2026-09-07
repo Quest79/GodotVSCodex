@@ -53,7 +53,7 @@ jobs:
           set +e
           for scene in tests/test_*.tscn; do
             echo "RUNNING $scene"
-            ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . "$scene"
+            timeout 20s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . "$scene"
             echo "TEST_EXIT_CODE=$?"
           done
           exit 0
