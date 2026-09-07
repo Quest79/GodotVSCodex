@@ -107,6 +107,9 @@ var cached_body_mass := 1.0
 var cached_body_radius := BODY_RADIUS
 var cached_projectile_collision_radius := PROJECTILE_COLLISION_RADIUS
 var render_manager: EnemyRenderManager
+var gpu_manager: GPUCombatManager
+var gpu_managed := false
+var gpu_slot := -1
 
 func _ready() -> void:
 	stats = base_stats.duplicate(true)
@@ -121,6 +124,13 @@ func _ready() -> void:
 	health_label.hide()
 	affliction_icon.hide()
 	boss_health_bar.hide()
+	gpu_manager = get_tree().get_first_node_in_group("gpu_combat") as GPUCombatManager
+	if is_instance_valid(gpu_manager) and gpu_manager.is_gpu_enabled():
+		gpu_slot = gpu_manager.register_enemy(self)
+		if gpu_slot >= 0:
+			gpu_managed = true
+			set_physics_process(false)
+			return
 	EnemyRegistry.register(self)
 	render_manager = get_tree().get_first_node_in_group("enemy_render_manager") as EnemyRenderManager
 	if is_instance_valid(render_manager):
@@ -128,9 +138,55 @@ func _ready() -> void:
 	crowd_separation_refresh_elapsed = fmod(float(get_instance_id()) * 0.000173, CROWD_SEPARATION_REFRESH_INTERVAL)
 
 func _exit_tree() -> void:
-	if is_instance_valid(render_manager):
+	if gpu_managed and is_instance_valid(gpu_manager):
+		gpu_manager.unregister_enemy(self)
+	elif is_instance_valid(render_manager):
 		render_manager.unregister_enemy(self)
-	EnemyRegistry.unregister(self)
+	if not gpu_managed:
+		EnemyRegistry.unregister(self)
+
+func _leave_gpu_management_for_cpu() -> void:
+	if not gpu_managed:
+		set_physics_process(true)
+		return
+	if is_instance_valid(gpu_manager):
+		gpu_manager.unregister_enemy(self)
+	gpu_managed = false
+	gpu_slot = -1
+	set_physics_process(true)
+	EnemyRegistry.register(self)
+
+
+func sync_gpu_snapshot(
+	new_position: Vector2,
+	new_velocity: Vector2,
+	new_health: float,
+	burn_stacks: float,
+	chill_amount: float,
+	shock_stacks: float,
+	freeze_remaining: float,
+	hit_flash: float
+) -> void:
+	if not gpu_managed or dying:
+		return
+	var previous_health := health.current
+	global_position = new_position
+	velocity = new_velocity
+	health.current = maxf(new_health, 0.0)
+	gpu_burn_intensity = clampf(burn_stacks / float(BURNING_STACK_THRESHOLD), 0.0, 1.0)
+	gpu_chill_intensity = clampf(chill_amount / CHILL_MAX_EFFECT, 0.0, 1.0)
+	gpu_shock_intensity = clampf(shock_stacks / float(SHOCK_MAX_STACKS), 0.0, 1.0)
+	gpu_frozen_amount = 1.0 if freeze_remaining > 0.0 else 0.0
+	gpu_hit_flash = hit_flash
+	if health.current < previous_health and health.current > 0.0 and damage_number_scene:
+		var damage_delta := previous_health - health.current
+		if _consume_feedback_budget(&"damage_number"):
+			var number := damage_number_scene.instantiate() as Node2D
+			number.call("setup", damage_delta, global_position + Vector2(0.0, -24.0))
+			get_tree().current_scene.add_child(number)
+	if health.current <= 0.0:
+		_on_died()
+
 
 func _on_health_changed(current: float, _maximum: float) -> void:
 	if is_boss:
@@ -216,6 +272,8 @@ func _boss_action_speed() -> float:
 	return phase_speed * _cold_action_speed_multiplier()
 
 func begin_boss_orbit(boss: Enemy, new_angle: float) -> void:
+	_leave_gpu_management_for_cpu()
+	visual.call("set_procedural_enabled", true)
 	orbit_boss_ref = weakref(boss)
 	orbit_angle = new_angle
 	orbit_radius = randf_range(150.0, 205.0)
@@ -507,6 +565,7 @@ func try_contact_damage(player_position: Vector2, player_radius: float, player_h
 func configure_boss() -> void:
 	if is_boss:
 		return
+	_leave_gpu_management_for_cpu()
 	is_boss = true
 	if is_instance_valid(render_manager):
 		render_manager.unregister_enemy(self)
@@ -537,17 +596,20 @@ func _on_died() -> void:
 	GameEvents.enemy_defeated_details.emit(is_boss)
 	_try_drop_loot()
 	if xp_gem_scene:
-		var gem := xp_gem_scene.instantiate() as XPGem
-		gem.global_position = global_position
-		gem.set_xp_value(stats.xp_reward)
-		get_tree().current_scene.call_deferred("add_child", gem)
+		if gpu_managed and is_instance_valid(gpu_manager):
+			gpu_manager.queue_xp_drop(global_position, stats.xp_reward, xp_gem_scene)
+		else:
+			var gem := xp_gem_scene.instantiate() as XPGem
+			gem.global_position = global_position
+			gem.set_xp_value(stats.xp_reward)
+			get_tree().current_scene.call_deferred("add_child", gem)
 	var visual_scale := maxf(absf($Visual.global_scale.x), absf($Visual.global_scale.y))
 	if is_boss:
 		var boss_effect := BOSS_DEATH_FX.new() as BossDeathFX
 		get_tree().current_scene.add_child(boss_effect)
 		boss_effect.global_position = global_position
 		boss_effect.configure(19.0 * visual_scale * 3.0)
-	else:
+	elif not gpu_managed:
 		if _consume_feedback_budget(&"death_fx"):
 			var effect := DEATH_FX.new() as EnemyDeathFX
 			get_tree().current_scene.add_child(effect)

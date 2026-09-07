@@ -1,12 +1,18 @@
 shader_type canvas_item;
 render_mode unshaded;
 
+uniform sampler2D gpu_state_tex : filter_nearest;
+uniform bool gpu_state_enabled = false;
+uniform float gpu_state_width = 1024.0;
+uniform float gpu_state_rows = 3.0;
+
 varying float animation_wave;
 varying float hit_amount;
 varying float burn_amount;
 varying float instance_seed;
 varying vec3 ailment_state;
 varying float health_fraction;
+varying float instance_active;
 
 float circle_mask(vec2 point, vec2 center, float radius, float softness) {
 	return 1.0 - smoothstep(radius - softness, radius + softness, length(point - center));
@@ -20,28 +26,70 @@ float hash11(float value) {
 	return fract(sin(value * 127.1) * 43758.5453123);
 }
 
+vec4 read_gpu_state(int row) {
+	vec2 uv = vec2((float(INSTANCE_ID) + 0.5) / gpu_state_width, (float(row) + 0.5) / gpu_state_rows);
+	return textureLod(gpu_state_tex, uv, 0.0);
+}
+
 void vertex() {
-	ailment_state = COLOR.rgb;
-	health_fraction = INSTANCE_CUSTOM.a;
-	COLOR = vec4(1.0);
-	instance_seed = INSTANCE_CUSTOM.r;
-	float phase = instance_seed * 6.28318530718;
-	// Health now occupies INSTANCE_CUSTOM.a. Keep the living animation
-	// deterministic and independent of health/transparency.
 	float urgency = 0.78;
+	float scale_value = 1.0;
+	vec2 world_position = vec2(0.0);
+	vec2 facing = vec2(1.0, 0.0);
+
+	if (gpu_state_enabled) {
+		vec4 s0 = read_gpu_state(0);
+		vec4 s1 = read_gpu_state(1);
+		vec4 s2 = read_gpu_state(2);
+		instance_active = s1.x;
+		if (instance_active < 0.5) {
+			VERTEX = vec2(-1000000.0);
+			COLOR = vec4(0.0);
+			return;
+		}
+		world_position = s0.xy;
+		if (dot(s0.zw, s0.zw) > 0.01) {
+			facing = normalize(s0.zw);
+		}
+		health_fraction = s1.y;
+		burn_amount = s1.z;
+		ailment_state = vec3(s1.w, s2.x, s2.y);
+		hit_amount = s2.z;
+		scale_value = max(s2.w, 0.2);
+		instance_seed = fract(float(INSTANCE_ID) * 0.61803398875);
+	} else {
+		instance_active = 1.0;
+		ailment_state = COLOR.rgb;
+		health_fraction = INSTANCE_CUSTOM.a;
+		instance_seed = INSTANCE_CUSTOM.r;
+		hit_amount = INSTANCE_CUSTOM.b;
+		burn_amount = INSTANCE_CUSTOM.g;
+	}
+
+	COLOR = vec4(1.0);
+	float phase = instance_seed * 6.28318530718;
 	float animation = TIME * mix(2.3, 6.2, urgency) + phase;
 	float breathing = sin(animation * 2.0) * 0.055;
-	VERTEX.x *= 1.0 + breathing * 0.45;
-	VERTEX.y *= 1.0 - breathing;
-	VERTEX.x += max(0.0, sin(animation)) * mix(1.0, 4.2, urgency);
-	float pop = 1.0 + INSTANCE_CUSTOM.b * 0.18;
-	VERTEX *= pop;
+	vec2 local = VERTEX;
+	local.x *= 1.0 + breathing * 0.45;
+	local.y *= 1.0 - breathing;
+	local.x += max(0.0, sin(animation)) * mix(1.0, 4.2, urgency);
+	float pop = 1.0 + hit_amount * 0.18;
+	local *= pop * scale_value;
+
+	if (gpu_state_enabled) {
+		mat2 rotation_matrix = mat2(facing.x, -facing.y, facing.y, facing.x);
+		VERTEX = world_position + rotation_matrix * local;
+	} else {
+		VERTEX = local;
+	}
 	animation_wave = animation;
-	hit_amount = INSTANCE_CUSTOM.b;
-	burn_amount = INSTANCE_CUSTOM.g;
 }
 
 void fragment() {
+	if (instance_active < 0.5) {
+		discard;
+	}
 	vec2 point = (UV - vec2(0.5)) * 96.0;
 	float radius = length(point);
 	float body_region = 1.0 - smoothstep(19.0, 31.0, radius);
@@ -78,18 +126,15 @@ void fragment() {
 	float shock = clamp(ailment_state.g, 0.0, 1.0);
 	float frozen = clamp(ailment_state.b, 0.0, 1.0);
 	float burn = clamp(burn_amount, 0.0, 1.0);
-
 	vec3 fx_color = vec3(0.0);
 	float fx_alpha = 0.0;
 
-	// Burning: hot shell, breathing aura, and rising embers.
 	if (burn > 0.001) {
 		float aura = (1.0 - smoothstep(25.0, 42.0, radius)) * burn;
 		float flame_rim = ring_mask(radius, 25.0 + sin(atan(point.y, point.x) * 7.0 + TIME * 7.0) * 2.4, 2.2) * burn;
 		fx_color += vec3(1.0, 0.10, 0.01) * aura * 0.42;
 		fx_color += vec3(1.0, 0.46, 0.03) * flame_rim * 0.9;
 		fx_alpha = max(fx_alpha, max(aura * 0.26, flame_rim * 0.62));
-
 		for (int ember_index = 0; ember_index < 10; ember_index++) {
 			float fi = float(ember_index);
 			float seed = hash11(fi + instance_seed * 97.0);
@@ -103,7 +148,6 @@ void fragment() {
 		}
 	}
 
-	// Chill: cyan frost rim and crystalline spokes.
 	if (chill > 0.001) {
 		float angle = atan(point.y, point.x);
 		float frost_rim = ring_mask(radius, 26.5, 2.0) * chill;
@@ -115,7 +159,6 @@ void fragment() {
 		fx_alpha = max(fx_alpha, max(frost_rim * 0.55, crystals * 0.95));
 	}
 
-	// Shock: animated jagged purple arcs orbit the body.
 	if (shock > 0.001) {
 		float angle = atan(point.y, point.x);
 		float wobble = sin(angle * 5.0 + TIME * 15.0 + instance_seed * 9.0) * 3.2;
@@ -130,7 +173,6 @@ void fragment() {
 		fx_alpha = max(fx_alpha, max(shock_glow * 0.32, bolt));
 	}
 
-	// Frozen: bright ice shell with hard crystalline rim.
 	if (frozen > 0.001) {
 		float angle = atan(point.y, point.x);
 		float ice_shell = (1.0 - smoothstep(22.0, 30.0, radius)) * frozen;
@@ -141,10 +183,8 @@ void fragment() {
 		fx_alpha = max(fx_alpha, max(ice_rim * 0.82, spike));
 	}
 
-	// GPU hit flash.
 	color = mix(color, vec3(1.0, 0.94, 0.88), clamp(hit_amount * 1.35, 0.0, 1.0));
 
-	// GPU health bar for damaged normal enemies. Replaces per-enemy Label nodes.
 	if (health_fraction < 0.999) {
 		float bar_y = 1.0 - smoothstep(1.2, 2.2, abs(point.y + 35.0));
 		float bar_x = 1.0 - smoothstep(18.0, 20.0, abs(point.x));

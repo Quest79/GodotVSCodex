@@ -24,13 +24,27 @@ var target: Node2D
 var boss_wave_active := false
 var boss_reinforcement_elapsed := 0.0
 var boss_reinforcement_delay := 6.0
+var gpu_manager: GPUCombatManager
 
 func _ready() -> void:
 	add_to_group("enemy_spawner")
 	target = get_tree().get_first_node_in_group("player") as Node2D
+	gpu_manager = get_tree().get_first_node_in_group("gpu_combat") as GPUCombatManager
 	spawn_timer.wait_time = starting_interval
 	spawn_timer.timeout.connect(_spawn_enemy)
+	if is_instance_valid(gpu_manager) and not gpu_manager.backend_announced:
+		gpu_manager.backend_ready.connect(_on_gpu_backend_ready, CONNECT_ONE_SHOT)
+	else:
+		call_deferred("_spawn_first_wave")
+
+func _on_gpu_backend_ready(_enabled: bool) -> void:
 	call_deferred("_spawn_first_wave")
+
+func _enemy_count() -> int:
+	var count := EnemyRegistry.get_enemy_count()
+	if is_instance_valid(gpu_manager) and gpu_manager.is_gpu_enabled():
+		count += gpu_manager.get_enemy_count()
+	return count
 
 func _spawn_first_wave() -> void:
 	var opening_count := mini(first_wave_starting_enemies, max_alive)
@@ -55,7 +69,7 @@ func _process(delta: float) -> void:
 func _spawn_enemy() -> void:
 	if not enemy_scene or not is_instance_valid(target):
 		return
-	if EnemyRegistry.get_enemy_count() >= max_alive:
+	if _enemy_count() >= max_alive:
 		return
 	var enemy := enemy_scene.instantiate() as Node2D
 	# Give the body its final transform before it enters the physics world.
@@ -87,7 +101,7 @@ func _process_boss_reinforcements(delta: float) -> void:
 	boss_reinforcement_delay = randf_range(boss_reinforcement_min_delay, boss_reinforcement_max_delay)
 	var count := randi_range(2, 4)
 	for index in range(count):
-		if EnemyRegistry.get_enemy_count() >= max_alive:
+		if _enemy_count() >= max_alive:
 			return
 		var minion := enemy_scene.instantiate() as Node2D
 		minion.global_position = _get_offscreen_spawn_position()

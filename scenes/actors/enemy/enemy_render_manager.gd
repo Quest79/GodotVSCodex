@@ -14,6 +14,8 @@ var enemy_indices: Dictionary[int, int] = {}
 var animation_phases: PackedFloat32Array = PackedFloat32Array()
 var facing_angles: PackedFloat32Array = PackedFloat32Array()
 var shadow_renderer: MultiMeshInstance2D
+var gpu_state_bound := false
+
 
 func _ready() -> void:
 	add_to_group("enemy_render_manager")
@@ -34,6 +36,7 @@ func _ready() -> void:
 	shader_material.shader = ENEMY_SHADER
 	material = shader_material
 
+
 func _create_shadow_renderer() -> void:
 	shadow_renderer = MultiMeshInstance2D.new()
 	shadow_renderer.name = "EnemyShadows"
@@ -51,7 +54,39 @@ func _create_shadow_renderer() -> void:
 	shadow_renderer.material = shadow_material
 	add_child(shadow_renderer)
 
+
+func bind_gpu_state(state_texture: Texture2D, maximum_instances: int) -> void:
+	if not state_texture or maximum_instances <= 0:
+		return
+	gpu_state_bound = true
+
+	multimesh.instance_count = maximum_instances
+	multimesh.visible_instance_count = maximum_instances
+	multimesh.custom_aabb = AABB(Vector3(-100000.0, -100000.0, -1.0), Vector3(200000.0, 200000.0, 2.0))
+	shadow_renderer.multimesh.instance_count = maximum_instances
+	shadow_renderer.multimesh.visible_instance_count = maximum_instances
+	shadow_renderer.multimesh.custom_aabb = AABB(Vector3(-100000.0, -100000.0, -1.0), Vector3(200000.0, 200000.0, 2.0))
+
+	for index in range(maximum_instances):
+		multimesh.set_instance_transform_2d(index, Transform2D.IDENTITY)
+		shadow_renderer.multimesh.set_instance_transform_2d(index, Transform2D.IDENTITY)
+
+	var enemy_material := material as ShaderMaterial
+	enemy_material.set_shader_parameter("gpu_state_tex", state_texture)
+	enemy_material.set_shader_parameter("gpu_state_enabled", true)
+	enemy_material.set_shader_parameter("gpu_state_width", float(maximum_instances))
+	enemy_material.set_shader_parameter("gpu_state_rows", 3.0)
+
+	var shadow_material := shadow_renderer.material as ShaderMaterial
+	shadow_material.set_shader_parameter("gpu_state_tex", state_texture)
+	shadow_material.set_shader_parameter("gpu_state_enabled", true)
+	shadow_material.set_shader_parameter("gpu_state_width", float(maximum_instances))
+	shadow_material.set_shader_parameter("gpu_state_rows", 3.0)
+
+
 func register_enemy(enemy: Enemy) -> void:
+	if gpu_state_bound:
+		return
 	if not is_instance_valid(enemy) or enemy_indices.has(enemy.get_instance_id()):
 		return
 	_ensure_capacity(rendered_enemies.size() + 1)
@@ -64,7 +99,10 @@ func register_enemy(enemy: Enemy) -> void:
 	multimesh.visible_instance_count = rendered_enemies.size()
 	shadow_renderer.multimesh.visible_instance_count = rendered_enemies.size()
 
+
 func unregister_enemy(enemy: Enemy) -> void:
+	if gpu_state_bound:
+		return
 	if not enemy:
 		return
 	var enemy_id := enemy.get_instance_id()
@@ -87,9 +125,10 @@ func unregister_enemy(enemy: Enemy) -> void:
 	if is_instance_valid(shadow_renderer) and shadow_renderer.multimesh:
 		shadow_renderer.multimesh.visible_instance_count = rendered_enemies.size()
 
+
 func _physics_process(delta: float) -> void:
-	# Enemy transforms only change on physics ticks. Updating this in _process()
-	# resent identical MultiMesh data several times per physics step at high FPS.
+	if gpu_state_bound:
+		return
 	if not multimesh:
 		return
 	var index := 0
@@ -105,8 +144,6 @@ func _physics_process(delta: float) -> void:
 			facing_angles[index] = lerp_angle(facing_angles[index], direction.angle(), 1.0 - exp(-9.0 * delta))
 		var transform := Transform2D(facing_angles[index], enemy.global_position)
 		multimesh.set_instance_transform_2d(index, transform)
-		# Shadows are separate GPU instances with translation only. They remain
-		# anchored to the ground while the enemy body turns and lunges above them.
 		var shadow_transform := Transform2D(0.0, enemy.global_position + SHADOW_OFFSET)
 		shadow_renderer.multimesh.set_instance_transform_2d(index, shadow_transform)
 		var health_fraction := clampf(enemy.health.current / maxf(enemy.health.maximum, 1.0), 0.0, 1.0)
@@ -116,8 +153,6 @@ func _physics_process(delta: float) -> void:
 			enemy.gpu_hit_flash,
 			health_fraction
 		))
-		# Never use instance alpha as arbitrary data: CanvasItem/MultiMesh may
-		# apply it as real transparency before/around the shader.
 		multimesh.set_instance_color(index, Color(
 			enemy.gpu_chill_intensity,
 			enemy.gpu_shock_intensity,
@@ -125,6 +160,7 @@ func _physics_process(delta: float) -> void:
 			1.0
 		))
 		index += 1
+
 
 func _ensure_capacity(required_count: int) -> void:
 	if multimesh and required_count <= multimesh.instance_count:

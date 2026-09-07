@@ -11,8 +11,10 @@ var damage := 10.0
 var cooldown := 0.8
 var projectile_scale := 1.0
 var skill_config: Dictionary = {}
+var gpu_manager: GPUCombatManager
 
 func _ready() -> void:
+	gpu_manager = get_tree().get_first_node_in_group("gpu_combat") as GPUCombatManager
 	attack_timer.timeout.connect(_attack)
 	attack_timer.start()
 
@@ -26,6 +28,18 @@ func configure_skill(new_config: Dictionary) -> void:
 	skill_config = new_config.duplicate(true)
 
 func _attack() -> void:
+	if not is_instance_valid(gpu_manager):
+		gpu_manager = get_tree().get_first_node_in_group("gpu_combat") as GPUCombatManager
+	if is_instance_valid(gpu_manager) and gpu_manager.is_gpu_enabled():
+		gpu_manager.fire_skill(
+			global_position,
+			skill_config,
+			damage,
+			projectile_speed,
+			projectile_scale,
+			attack_range
+		)
+		return
 	var projectile_count := maxi(1, roundi(float(skill_config.get(&"projectile_count", 1.0))))
 	var targets := _find_nearest_enemies(projectile_count)
 	if targets.is_empty() or not projectile_scene:
