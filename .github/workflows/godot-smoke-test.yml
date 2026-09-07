@@ -1,7 +1,7 @@
 name: Godot Smoke Test
 
 concurrency:
-  group: godot-smoke-main
+  group: gpu-dev-validator
   cancel-in-progress: true
 
 on:
