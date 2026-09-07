@@ -340,7 +340,6 @@ func _start_boss_orbit_barrage() -> void:
 		var minion := spawner.enemy_scene.instantiate() as Enemy
 		minion.global_position = global_position
 		get_tree().current_scene.add_child(minion)
-		EnemyRegistry.update_enemy(minion)
 		minion.begin_boss_orbit(self, TAU * float(index) / BOSS_ORBIT_MINION_COUNT)
 		boss_orbit_group.append(weakref(minion))
 	boss_orbit_state = BOSS_ORBITING

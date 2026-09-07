@@ -76,7 +76,6 @@ func _spawn_enemy() -> void:
 	# Adding it at (0, 0) for even one physics tick can displace the player.
 	enemy.global_position = _get_offscreen_spawn_position()
 	get_tree().current_scene.add_child(enemy)
-	EnemyRegistry.update_enemy(enemy as Enemy)
 
 func _spawn_boss() -> void:
 	if not enemy_scene or not is_instance_valid(target):
@@ -88,7 +87,6 @@ func _spawn_boss() -> void:
 	var boss := enemy_scene.instantiate() as Enemy
 	boss.global_position = _get_offscreen_spawn_position()
 	get_tree().current_scene.add_child(boss)
-	EnemyRegistry.update_enemy(boss)
 	boss.configure_boss()
 	boss.health.died.connect(_on_boss_died, CONNECT_ONE_SHOT)
 	boss.health.died.connect(_spawn_boss_minions.bind(boss), CONNECT_ONE_SHOT)
@@ -106,7 +104,6 @@ func _process_boss_reinforcements(delta: float) -> void:
 		var minion := enemy_scene.instantiate() as Node2D
 		minion.global_position = _get_offscreen_spawn_position()
 		get_tree().current_scene.add_child(minion)
-		EnemyRegistry.update_enemy(minion as Enemy)
 
 func _on_boss_died() -> void:
 	boss_wave_active = false
@@ -124,7 +121,6 @@ func _spawn_boss_minions(boss: Enemy) -> void:
 		var offset := Vector2.from_angle(index * PI + randf_range(-0.45, 0.45)) * randf_range(24.0, 48.0)
 		minion.position = boss.global_position + offset
 		get_tree().current_scene.add_child(minion)
-		EnemyRegistry.update_enemy(minion as Enemy)
 
 func _get_offscreen_spawn_position() -> Vector2:
 	var camera := target.get_node_or_null("Camera2D") as Camera2D

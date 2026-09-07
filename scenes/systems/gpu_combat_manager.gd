@@ -318,7 +318,8 @@ func _flush_xp_clusters() -> void:
 		if not gem_scene:
 			continue
 		var gem := gem_scene.instantiate() as XPGem
-		gem.global_position = Vector2(entry["weighted_position"])
+		var cluster_position: Vector2 = entry["weighted_position"]
+		gem.global_position = cluster_position
 		gem.set_xp_value(int(entry["value"]))
 		scene.add_child(gem)
 
@@ -553,7 +554,7 @@ func _dispatch_gpu_on_render_thread() -> void:
 	for upload in uploads:
 		var kind := StringName(upload["kind"])
 		var slot := int(upload["slot"])
-		var data := upload["data"] as PackedByteArray
+		var data: PackedByteArray = upload["data"]
 		if kind == &"enemy":
 			rd.buffer_update(enemy_buffer, slot * ENEMY_STRIDE, ENEMY_STRIDE, data)
 		elif kind == &"projectile":
@@ -736,5 +737,5 @@ func _free_gpu_on_render_thread() -> void:
 		arc_texture_rid,
 		burst_texture_rid,
 	]:
-		if rid is RID and rid.is_valid():
+		if rid.is_valid():
 			rd.free_rid(rid)
