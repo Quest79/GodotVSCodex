@@ -12,11 +12,23 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install Vulkan validation tools
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y glslang-tools xvfb mesa-vulkan-drivers vulkan-tools
+
+      - name: Compile compute GLSL
+        run: |
+          set -euxo pipefail
+          tail -n +2 scenes/systems/gpu_combat.glsl > /tmp/gpu_combat.comp
+          glslangValidator -V -S comp /tmp/gpu_combat.comp -o /tmp/gpu_combat.spv
 
       - name: Download Godot 4.7.2
         run: |
@@ -34,26 +46,42 @@ jobs:
           ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --import 2>&1 | tee import.log
           code=${PIPESTATUS[0]}
           echo "IMPORT_EXIT_CODE=$code"
-          grep -E "SCRIPT ERROR|Parse Error|ERROR:" import.log || true
-          test -d .godot/imported || true
-          exit 0
+          if [ "$code" -ne 0 ]; then exit "$code"; fi
+          if grep -E "SCRIPT ERROR|Parse Error|SHADER ERROR|ERROR:" import.log; then exit 1; fi
+          test -d .godot/imported
 
-      - name: Smoke-run main scene
+      - name: Smoke-run CPU fallback
         run: |
           set -o pipefail
           ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --quit-after 180 2>&1 | tee smoke.log
           code=${PIPESTATUS[0]}
           echo "SMOKE_EXIT_CODE=$code"
-          grep -E "SCRIPT ERROR|Parse Error|ERROR:" smoke.log || true
-          exit 0
+          if [ "$code" -ne 0 ]; then exit "$code"; fi
+          if grep -E "SCRIPT ERROR|Parse Error|SHADER ERROR|ERROR:" smoke.log; then exit 1; fi
 
       - name: Run regression scenes
         run: |
           set -euxo pipefail
-          set +e
           for scene in tests/test_*.tscn; do
+            if [ "$scene" = "tests/test_gpu_backend.tscn" ]; then
+              continue
+            fi
             echo "RUNNING $scene"
             timeout 20s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . "$scene"
-            echo "TEST_EXIT_CODE=$?"
           done
-          exit 0
+
+      - name: Run live Vulkan compute backend
+        run: |
+          set -euxo pipefail
+          LVP_ICD="$(find /usr/share/vulkan/icd.d -name '*lvp*.json' | head -n 1)"
+          test -n "$LVP_ICD"
+          VK_ICD_FILENAMES="$LVP_ICD" vulkaninfo --summary
+          timeout 45s xvfb-run -a env VK_ICD_FILENAMES="$LVP_ICD" \
+            ./Godot_v4.7.2-stable_linux.x86_64 \
+            --path . tests/test_gpu_backend.tscn \
+            --display-driver x11 \
+            --rendering-method forward_plus \
+            --rendering-driver vulkan \
+            2>&1 | tee gpu_backend.log
+          grep -q "GPU_BACKEND_TEST_OK" gpu_backend.log
+          if grep -E "SCRIPT ERROR|Parse Error|SHADER ERROR|ERROR:" gpu_backend.log; then exit 1; fi
