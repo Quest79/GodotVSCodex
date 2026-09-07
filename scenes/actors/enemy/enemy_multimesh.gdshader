@@ -26,21 +26,22 @@ float hash11(float value) {
 	return fract(sin(value * 127.1) * 43758.5453123);
 }
 
-vec4 read_gpu_state(int row) {
-	vec2 uv = vec2((INSTANCE_CUSTOM.r + 0.5) / gpu_state_width, (float(row) + 0.5) / gpu_state_rows);
+vec4 read_gpu_state(int row, float slot) {
+	vec2 uv = vec2((slot + 0.5) / gpu_state_width, (float(row) + 0.5) / gpu_state_rows);
 	return textureLod(gpu_state_tex, uv, 0.0);
 }
 
 void vertex() {
+	float gpu_slot = INSTANCE_CUSTOM.r;
 	float urgency = 0.78;
 	float scale_value = 1.0;
 	vec2 world_position = vec2(0.0);
 	vec2 facing = vec2(1.0, 0.0);
 
 	if (gpu_state_enabled) {
-		vec4 s0 = read_gpu_state(0);
-		vec4 s1 = read_gpu_state(1);
-		vec4 s2 = read_gpu_state(2);
+		vec4 s0 = read_gpu_state(0, gpu_slot);
+		vec4 s1 = read_gpu_state(1, gpu_slot);
+		vec4 s2 = read_gpu_state(2, gpu_slot);
 		instance_active = s1.x;
 		if (instance_active < 0.5) {
 			VERTEX = vec2(-1000000.0);
@@ -56,12 +57,12 @@ void vertex() {
 		ailment_state = vec3(s1.w, s2.x, s2.y);
 		hit_amount = s2.z;
 		scale_value = max(s2.w, 0.2);
-		instance_seed = fract(INSTANCE_CUSTOM.r * 0.61803398875);
+		instance_seed = fract(gpu_slot * 0.61803398875);
 	} else {
 		instance_active = 1.0;
 		ailment_state = COLOR.rgb;
 		health_fraction = INSTANCE_CUSTOM.a;
-		instance_seed = INSTANCE_CUSTOM.r;
+		instance_seed = gpu_slot;
 		hit_amount = INSTANCE_CUSTOM.b;
 		burn_amount = INSTANCE_CUSTOM.g;
 	}
