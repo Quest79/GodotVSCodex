@@ -7,6 +7,11 @@ const GPU_SHADER_PATH := "res://scenes/systems/gpu_combat.glsl"
 const PROJECTILE_SHADER: Shader = preload("res://scenes/combat/gpu_projectile.gdshader")
 const ARC_SHADER: Shader = preload("res://scenes/combat/gpu_arc.gdshader")
 const BURST_SHADER: Shader = preload("res://scenes/combat/gpu_burst.gdshader")
+const PROJECTILE_VISUAL_PROXY := preload("res://scenes/combat/gpu_projectile_visual_proxy.gd")
+const PROJECTILE_IMPACT_FX := preload("res://scenes/combat/projectile_impact_fx.gd")
+const FIRE_EXPLOSION_FX := preload("res://scenes/combat/fire_explosion_fx.gd")
+const LIGHTNING_ARC_FX := preload("res://scenes/combat/lightning_arc_fx.gd")
+const ENEMY_DEATH_FX := preload("res://scenes/actors/enemy/enemy_death_fx.gd")
 
 const MAX_ENEMIES := 1024
 const MAX_PROJECTILES := 2048
@@ -24,7 +29,12 @@ const BURST_STRIDE := 32
 const COUNTER_STRIDE := 16
 
 const SNAPSHOT_INTERVAL_FRAMES := 4
+const VISUAL_SNAPSHOT_INTERVAL_FRAMES := 2
 const CONTACT_CHECK_INTERVAL := 0.1
+const IMPACT_FX_FRAME_BUDGET := 16
+const LIGHTNING_ARC_FRAME_BUDGET := 12
+const EXPLOSION_FX_FRAME_BUDGET := 6
+const DEATH_FX_FRAME_BUDGET := 10
 const XP_CLUSTER_SIZE := 160.0
 
 var rd: RenderingDevice
@@ -66,6 +76,16 @@ var dispatch_queued := false
 var snapshot_in_flight := false
 var snapshot_available := false
 var snapshot_bytes := PackedByteArray()
+
+var projectile_snapshot_in_flight := false
+var projectile_snapshot_available := false
+var projectile_snapshot_bytes := PackedByteArray()
+var arc_snapshot_in_flight := false
+var arc_snapshot_available := false
+var arc_snapshot_bytes := PackedByteArray()
+var burst_snapshot_in_flight := false
+var burst_snapshot_available := false
+var burst_snapshot_bytes := PackedByteArray()
 var requested_delta := 0.0
 var requested_time := 0.0
 var requested_player_position := Vector2.ZERO
@@ -85,6 +105,11 @@ var projectile_cursor := 0
 var contact_check_elapsed := 0.0
 var player: Player
 
+var projectile_visuals: Dictionary[int, GPUProjectileVisualProxy] = {}
+var projectile_visual_pool: Array[GPUProjectileVisualProxy] = []
+var arc_last_remaining := PackedFloat32Array()
+var burst_last_remaining := PackedFloat32Array()
+
 var xp_clusters: Dictionary = {}
 var xp_flush_queued := false
 
@@ -99,6 +124,8 @@ func _ready() -> void:
 	cpu_positions.resize(MAX_ENEMIES)
 	cpu_active.resize(MAX_ENEMIES)
 	slot_tokens.resize(MAX_ENEMIES)
+	arc_last_remaining.resize(MAX_ARCS)
+	burst_last_remaining.resize(MAX_BURSTS)
 	for index in range(MAX_ENEMIES - 1, -1, -1):
 		enemy_free_slots.append(index)
 
@@ -134,6 +161,36 @@ func _process(_delta: float) -> void:
 		state_mutex.unlock()
 		if not local_snapshot.is_empty():
 			_process_enemy_snapshot(local_snapshot)
+
+	if projectile_snapshot_available:
+		var local_projectiles := PackedByteArray()
+		state_mutex.lock()
+		if projectile_snapshot_available:
+			local_projectiles = projectile_snapshot_bytes
+			projectile_snapshot_available = false
+		state_mutex.unlock()
+		if not local_projectiles.is_empty():
+			_process_projectile_visual_snapshot(local_projectiles)
+
+	if arc_snapshot_available:
+		var local_arcs := PackedByteArray()
+		state_mutex.lock()
+		if arc_snapshot_available:
+			local_arcs = arc_snapshot_bytes
+			arc_snapshot_available = false
+		state_mutex.unlock()
+		if not local_arcs.is_empty():
+			_process_arc_visual_snapshot(local_arcs)
+
+	if burst_snapshot_available:
+		var local_bursts := PackedByteArray()
+		state_mutex.lock()
+		if burst_snapshot_available:
+			local_bursts = burst_snapshot_bytes
+			burst_snapshot_available = false
+		state_mutex.unlock()
+		if not local_bursts.is_empty():
+			_process_burst_visual_snapshot(local_bursts)
 
 	if gpu_enabled:
 		contact_check_elapsed += _delta
@@ -476,6 +533,7 @@ func _create_gpu_renderers() -> void:
 		2
 	)
 	projectile_renderer.z_index = 3
+	projectile_renderer.visible = false
 	add_child(projectile_renderer)
 
 	arc_renderer = _make_state_renderer(
@@ -488,6 +546,7 @@ func _create_gpu_renderers() -> void:
 		2
 	)
 	arc_renderer.z_index = 4
+	arc_renderer.visible = false
 	add_child(arc_renderer)
 
 	burst_renderer = _make_state_renderer(
@@ -500,6 +559,7 @@ func _create_gpu_renderers() -> void:
 		2
 	)
 	burst_renderer.z_index = 5
+	burst_renderer.visible = false
 	add_child(burst_renderer)
 
 
@@ -679,6 +739,17 @@ func _dispatch_gpu_on_render_thread() -> void:
 		snapshot_in_flight = true
 		rd.buffer_get_data_async(enemy_buffer, Callable(self, "_on_enemy_snapshot_from_gpu"))
 
+	if render_frame_index % VISUAL_SNAPSHOT_INTERVAL_FRAMES == 0:
+		if not projectile_snapshot_in_flight:
+			projectile_snapshot_in_flight = true
+			rd.buffer_get_data_async(projectile_buffer, Callable(self, "_on_projectile_snapshot_from_gpu"))
+		if not arc_snapshot_in_flight:
+			arc_snapshot_in_flight = true
+			rd.buffer_get_data_async(arc_buffer, Callable(self, "_on_arc_snapshot_from_gpu"))
+		if not burst_snapshot_in_flight:
+			burst_snapshot_in_flight = true
+			rd.buffer_get_data_async(burst_buffer, Callable(self, "_on_burst_snapshot_from_gpu"))
+
 	state_mutex.lock()
 	dispatch_queued = false
 	state_mutex.unlock()
@@ -755,6 +826,154 @@ func _process_enemy_snapshot(data: PackedByteArray) -> void:
 		else:
 			cpu_active[slot] = 0
 			enemy.sync_gpu_snapshot(position, Vector2.ZERO, 0.0, burn, chill, shock, freeze_remaining, hit_flash)
+
+
+func _on_projectile_snapshot_from_gpu(data: PackedByteArray) -> void:
+	state_mutex.lock()
+	projectile_snapshot_bytes = data
+	projectile_snapshot_available = true
+	projectile_snapshot_in_flight = false
+	state_mutex.unlock()
+
+
+func _on_arc_snapshot_from_gpu(data: PackedByteArray) -> void:
+	state_mutex.lock()
+	arc_snapshot_bytes = data
+	arc_snapshot_available = true
+	arc_snapshot_in_flight = false
+	state_mutex.unlock()
+
+
+func _on_burst_snapshot_from_gpu(data: PackedByteArray) -> void:
+	state_mutex.lock()
+	burst_snapshot_bytes = data
+	burst_snapshot_available = true
+	burst_snapshot_in_flight = false
+	state_mutex.unlock()
+
+
+func _skill_id_for_type(skill_type: int) -> StringName:
+	match skill_type:
+		1:
+			return &"fireball"
+		2:
+			return &"ice_shard"
+		3:
+			return &"chain_lightning"
+	return &"default_attack"
+
+
+func _obtain_projectile_visual() -> GPUProjectileVisualProxy:
+	var proxy: GPUProjectileVisualProxy
+	if projectile_visual_pool.is_empty():
+		proxy = PROJECTILE_VISUAL_PROXY.new() as GPUProjectileVisualProxy
+		add_child(proxy)
+	else:
+		proxy = projectile_visual_pool.pop_back()
+	return proxy
+
+
+func _release_projectile_visual(slot: int) -> void:
+	if not projectile_visuals.has(slot):
+		return
+	var proxy := projectile_visuals[slot] as GPUProjectileVisualProxy
+	projectile_visuals.erase(slot)
+	if is_instance_valid(proxy):
+		proxy.deactivate()
+		projectile_visual_pool.append(proxy)
+
+
+func _process_projectile_visual_snapshot(data: PackedByteArray) -> void:
+	if data.size() < MAX_PROJECTILES * PROJECTILE_STRIDE:
+		return
+	var active_slots: Dictionary[int, bool] = {}
+	for slot in range(MAX_PROJECTILES):
+		var base := slot * PROJECTILE_STRIDE
+		var active := data.decode_float(base + 32) > 0.5
+		if not active:
+			continue
+		active_slots[slot] = true
+		var position := Vector2(data.decode_float(base), data.decode_float(base + 4))
+		var direction := Vector2(data.decode_float(base + 8), data.decode_float(base + 12))
+		var speed := data.decode_float(base + 16)
+		var scale_value := data.decode_float(base + 28)
+		var skill_type := roundi(data.decode_float(base + 40))
+		var skill_id := _skill_id_for_type(skill_type)
+		var proxy: GPUProjectileVisualProxy
+		if projectile_visuals.has(slot):
+			proxy = projectile_visuals[slot] as GPUProjectileVisualProxy
+			if proxy.skill_id != skill_id:
+				proxy.activate(skill_id, position, direction, speed, scale_value)
+			else:
+				proxy.apply_snapshot(position, direction, speed, scale_value)
+		else:
+			proxy = _obtain_projectile_visual()
+			projectile_visuals[slot] = proxy
+			proxy.activate(skill_id, position, direction, speed, scale_value)
+
+	var stale_slots: Array[int] = []
+	for existing_slot in projectile_visuals:
+		if not active_slots.has(existing_slot):
+			stale_slots.append(int(existing_slot))
+	for slot in stale_slots:
+		_release_projectile_visual(slot)
+
+
+func _process_arc_visual_snapshot(data: PackedByteArray) -> void:
+	if data.size() < MAX_ARCS * ARC_STRIDE:
+		return
+	var spawned := 0
+	for slot in range(MAX_ARCS):
+		var base := slot * ARC_STRIDE
+		var remaining := data.decode_float(base + 16)
+		var active := data.decode_float(base + 28) > 0.5
+		var is_new := active and (arc_last_remaining[slot] <= 0.0 or remaining > arc_last_remaining[slot] + 0.01)
+		if is_new and spawned < LIGHTNING_ARC_FRAME_BUDGET:
+			var start := Vector2(data.decode_float(base), data.decode_float(base + 4))
+			var finish := Vector2(data.decode_float(base + 8), data.decode_float(base + 12))
+			var effect := LIGHTNING_ARC_FX.new() as LightningArcFX
+			get_tree().current_scene.add_child(effect)
+			effect.configure(start, finish)
+			spawned += 1
+		arc_last_remaining[slot] = remaining if active else 0.0
+
+
+func _process_burst_visual_snapshot(data: PackedByteArray) -> void:
+	if data.size() < MAX_BURSTS * BURST_STRIDE:
+		return
+	var impact_count := 0
+	var explosion_count := 0
+	var death_count := 0
+	for slot in range(MAX_BURSTS):
+		var base := slot * BURST_STRIDE
+		var remaining := data.decode_float(base + 16)
+		var active := data.decode_float(base + 28) > 0.5
+		var is_new := active and (burst_last_remaining[slot] <= 0.0 or remaining > burst_last_remaining[slot] + 0.01)
+		if is_new:
+			var position := Vector2(data.decode_float(base), data.decode_float(base + 4))
+			var event_type := roundi(data.decode_float(base + 8))
+			var radius := data.decode_float(base + 12)
+			var direction_angle := data.decode_float(base + 24)
+			if event_type >= 10 and event_type < 20 and impact_count < IMPACT_FX_FRAME_BUDGET:
+				var skill_id := _skill_id_for_type(event_type - 10)
+				var effect := PROJECTILE_IMPACT_FX.new() as ProjectileImpactFX
+				get_tree().current_scene.add_child(effect)
+				effect.global_position = position
+				effect.configure(skill_id, Vector2.from_angle(direction_angle), maxf(radius / 24.0, 0.2))
+				impact_count += 1
+			elif event_type >= 20 and event_type < 30 and explosion_count < EXPLOSION_FX_FRAME_BUDGET:
+				var effect := FIRE_EXPLOSION_FX.new() as FireExplosionFX
+				get_tree().current_scene.add_child(effect)
+				effect.global_position = position
+				effect.configure(radius)
+				explosion_count += 1
+			elif event_type == 30 and death_count < DEATH_FX_FRAME_BUDGET:
+				var effect := ENEMY_DEATH_FX.new() as EnemyDeathFX
+				get_tree().current_scene.add_child(effect)
+				effect.global_position = position
+				effect.configure(GameEvents.enemy_death_effect, radius)
+				death_count += 1
+		burst_last_remaining[slot] = remaining if active else 0.0
 
 
 func _storage_uniform(binding: int, rid: RID) -> RDUniform:
