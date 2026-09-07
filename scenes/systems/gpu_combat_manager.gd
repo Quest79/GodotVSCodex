@@ -735,6 +735,23 @@ func _encode_vec4(bytes: PackedByteArray, offset: int, value: Vector4) -> void:
 
 
 func _exit_tree() -> void:
+	gpu_enabled = false
+
+	# ShaderMaterials must stop referencing Texture2DRD wrappers before the
+	# underlying RenderingDevice RIDs are freed, otherwise Godot rebuilds
+	# invalid uniform sets during scene teardown/reload.
+	for renderer in [projectile_renderer, arc_renderer, burst_renderer]:
+		if is_instance_valid(renderer):
+			renderer.material = null
+
+	var enemy_renderer := get_tree().get_first_node_in_group("enemy_render_manager") as EnemyRenderManager
+	if is_instance_valid(enemy_renderer):
+		enemy_renderer.unbind_gpu_state()
+
+	for state_texture in [enemy_state_texture, projectile_state_texture, arc_state_texture, burst_state_texture]:
+		if state_texture != null:
+			state_texture.texture_rd_rid = RID()
+
 	if rd != null and render_init_success:
 		RenderingServer.call_on_render_thread(Callable(self, "_free_gpu_on_render_thread"))
 
