@@ -16,20 +16,20 @@ vec4 read_gpu_state(int row, float slot) {
 void vertex() {
 	float gpu_slot = INSTANCE_CUSTOM.r;
 	instance_active = 1.0;
-	if (!gpu_state_enabled) {
-		return;
+	if (gpu_state_enabled) {
+		vec4 s0 = read_gpu_state(0, gpu_slot);
+		vec4 s1 = read_gpu_state(1, gpu_slot);
+		vec4 s2 = read_gpu_state(2, gpu_slot);
+		instance_active = s1.x;
+		if (instance_active < 0.5) {
+			VERTEX = vec2(-1000000.0);
+		} else {
+			float scale_value = max(s2.w, 0.2);
+			VERTEX = s0.xy + vec2(0.0, 18.0 * scale_value) + VERTEX * scale_value;
+		}
 	}
-	vec4 s0 = read_gpu_state(0, gpu_slot);
-	vec4 s1 = read_gpu_state(1, gpu_slot);
-	vec4 s2 = read_gpu_state(2, gpu_slot);
-	instance_active = s1.x;
-	if (instance_active < 0.5) {
-		VERTEX = vec2(-1000000.0);
-		return;
-	}
-	float scale_value = max(s2.w, 0.2);
-	VERTEX = s0.xy + vec2(0.0, 18.0 * scale_value) + VERTEX * scale_value;
 }
+
 
 void fragment() {
 	if (instance_active < 0.5) {
